@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接码平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);min-height:100vh;padding:20px">
+    <div style="max-width:520px;width:100%;margin:0 auto">
+        <!-- 顶部：余额+项目选择 -->
+        <div id="stepSelect" style="background:white;border-radius:12px;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div>
+                    <div style="font-size:1.3rem;font-weight:700;color:#1e293b">📱 接码平台</div>
+                </div>
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#16a34a;padding:6px 14px;border-radius:20px;font-weight:600;font-size:0.9rem">
+                    💰 <span id="balanceDisplay">0</span> 元
+                </span>
+            </div>
+
+            <div style="font-size:0.9rem;color:#64748b;margin-bottom:12px">选择项目开始收码</div>
+
+            <div id="projectList">
+                {% for p in projects %}
+                <div class="project-item" data-id="{{ p.id }}" style="background:white;border:2px solid #e2e8f0;border-radius:10px;padding:16px 20px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div>
+                        <div style="font-weight:600;font-size:1.05rem;color:#1e293b">{{ p.name }}</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;padding:6px 16px;border-radius:20px;font-weight:700;font-size:1rem">{{ p.price }} 元</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top:16px">
+                <a href="/" style="color:#64748b;font-size:0.85rem;text-decoration:none">🔗 充值卡密</a>
+            </div>
+        </div>
+
+        <!-- 收码界面 -->
+        <div id="stepSMS" class="d-none" style="background:rgba(255,255,255,0.06);backdrop-filter:blur(12px);border-radius:12px;padding:32px 24px;text-align:center;border:1px solid rgba(255,255,255,0.1);box-shadow:0 25px 50px -12px rgba(0,0,0,0.3)">
+            <!-- 项目名+余额 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <span style="color:#93c5fd;font-size:1.1rem;font-weight:600" id="projectName">腾讯元宝</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.12);color:#4ade80;padding:4px 12px;border-radius:20px;font-weight:600;font-size:0.85rem">
+                    💰 <span id="balanceDisplay2">0</span> 元
+                </span>
+            </div>
+
+            <!-- 号码 -->
+            <div style="margin-bottom:16px">
+                <div style="color:#94a3b8;font-size:0.9rem;margin-bottom:6px">当前号码</div>
+                <div style="color:#f1f5f9;font-size:2rem;font-weight:700;font-family:'Courier New',monospace;letter-spacing:2px" id="phoneDisplay">---</div>
+            </div>
+
+            <!-- 倒计时 -->
+            <div style="margin-bottom:24px">
+                <span style="color:#e2e8f0;font-size:1.3rem;font-weight:600">⏱ <span id="countdown">200</span>秒</span>
+            </div>
+
+            <!-- 等待中 -->
+            <div id="waitingArea">
+                <div style="display:inline-block;width:50px;height:50px;border:3px solid rgba(255,255,255,0.1);border-top-color:#818cf8;border-radius:50%;animation:spin 1s linear infinite"></div>
+                <div style="color:#e2e8f0;font-size:1.1rem;margin-top:16px">等待验证码中...</div>
+                <div style="color:#64748b;font-size:0.85rem;margin-top:6px">自动轮询，收到即止</div>
+            </div>
+
+            <!-- 验证码已收到 -->
+            <div id="codeArea" class="d-none">
+                <div style="color:#94a3b8;font-size:0.9rem;margin-bottom:10px">验证码</div>
+                <div style="font-size:3.5rem;font-weight:800;color:#22c55e;letter-spacing:8px;font-family:'Courier New',monospace;text-shadow:0 0 40px rgba(34,197,94,0.3);animation:codePulse 2s ease-in-out" id="codeDisplay">---</div>
+                <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:14px;margin-top:16px;color:#e2e8f0;font-size:0.9rem;text-align:left;line-height:1.6" id="smsDisplay"></div>
+            </div>
+
+            <!-- 超时 -->
+            <div id="timeoutArea" class="d-none">
+                <div style="color:#94a3b8;font-size:1rem;margin-bottom:12px">⏰ 超时未收到</div>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+                    <button class="btn-sm" style="background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3)" onclick="releasePhone()">释放号码</button>
+                    <button class="btn-sm" style="background:#4f46e5;color:white;border:none" onclick="backToProjects()">重新选择</button>
+                </div>
+            </div>
+
+            <!-- 错误 -->
+            <div id="errorArea" class="d-none" style="padding:14px;color:#fca5a5;font-size:0.9rem;border:1px solid rgba(239,68,68,0.3);border-radius:8px"></div>
+
+            <!-- 底部按钮 -->
+            <div style="margin-top:20px;display:flex;gap:10px;justify-content:center">
+                <button id="releaseBtn" style="padding:8px 20px;font-size:0.85rem;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:20px;cursor:pointer" onclick="releasePhone()">释放号码</button>
+                <button id="backBtn" style="padding:8px 20px;font-size:0.85rem;background:rgba(255,255,255,0.1);color:#e2e8f0;border:1px solid rgba(255,255,255,0.2);border-radius:20px;cursor:pointer" onclick="backToProjects()">← 返回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== 状态 ==========
+let currentViewToken = null;
+let polling = false;
+let secondsLeft = 200;
+let countdownTimer = null;
+
+// ========== 余额 ==========
+async function loadBalance() {
+    try {
+        const r = await fetch('/balance');
+        const d = await r.json();
+        const bal = d.balance || 0;
+        document.getElementById('balanceDisplay').textContent = bal;
+        const el2 = document.getElementById('balanceDisplay2');
+        if (el2) el2.textContent = bal;
+    } catch(e) {}
+}
+
+// ========== 项目选择 ==========
+document.querySelectorAll('.project-item').forEach(el => {
+    el.addEventListener('click', function() {
+        startOrder(this.dataset.id, this.querySelector('div:first-child div').textContent);
+    });
+});
+
+async function startOrder(projectId, projectName) {
+    const r = await fetch('/start-order', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({project_id: projectId})
+    });
+    const d = await r.json();
+    if (!d.ok) {
+        alert('❌ ' + d.msg);
+        return;
+    }
+
+    // Switch to SMS view
+    document.getElementById('stepSelect').classList.add('d-none');
+    document.getElementById('stepSMS').classList.remove('d-none');
+    document.getElementById('projectName').textContent = projectName || '项目';
+    document.getElementById('phoneDisplay').textContent = d.phone;
+    document.getElementById('waitingArea').classList.remove('d-none');
+    document.getElementById('codeArea').classList.add('d-none');
+    document.getElementById('timeoutArea').classList.add('d-none');
+    document.getElementById('errorArea').classList.add('d-none');
+    document.getElementById('releaseBtn').textContent = '释放号码';
+    document.getElementById('releaseBtn').disabled = false;
+    document.getElementById('releaseBtn').style.opacity = '1';
+    document.getElementById('releaseBtn').style.cursor = 'pointer';
+
+    currentViewToken = d.view_token;
+    secondsLeft = 200;
+    document.getElementById('countdown').textContent = secondsLeft;
+    polling = true;
+
+    // Start countdown
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(updateTimer, 1000);
+
+    // Start polling
+    pollSMS();
+    loadBalance();
+}
+
+// ========== 倒计时 ==========
+function updateTimer() {
+    document.getElementById('countdown').textContent = secondsLeft;
+    if (secondsLeft <= 0) {
+        polling = false;
+        if (countdownTimer) clearInterval(countdownTimer);
+        document.getElementById('waitingArea').classList.add('d-none');
+        document.getElementById('timeoutArea').classList.remove('d-none');
+        document.getElementById('errorArea').classList.add('d-none');
+        return;
+    }
+    secondsLeft--;
+}
+
+// ========== 轮询 ==========
+async function pollSMS() {
+    if (!polling || !currentViewToken) return;
+    try {
+        const r = await fetch('/api/sms/' + currentViewToken);
+        const d = await r.json();
+        if (d.ok && d.code) {
+            polling = false;
+            if (countdownTimer) clearInterval(countdownTimer);
+            document.getElementById('waitingArea').classList.add('d-none');
+            document.getElementById('codeArea').classList.remove('d-none');
+            document.getElementById('codeDisplay').textContent = d.code;
+            document.getElementById('smsDisplay').textContent = d.sms || '(无短信内容)';
+            document.getElementById('releaseBtn').textContent = '✅ 已收到';
+            document.getElementById('releaseBtn').disabled = true;
+            document.getElementById('releaseBtn').style.opacity = '0.5';
+            document.getElementById('releaseBtn').style.cursor = 'default';
+            loadBalance();
+            return;
+        }
+        if (d.msg && (d.msg.includes('余额不足') || d.msg.includes('失败'))) {
+            polling = false;
+            if (countdownTimer) clearInterval(countdownTimer);
+            document.getElementById('waitingArea').classList.add('d-none');
+            document.getElementById('errorArea').classList.remove('d-none');
+            document.getElementById('errorArea').textContent = '❌ ' + d.msg;
+            return;
+        }
+    } catch(e) {}
+    setTimeout(pollSMS, 3000);
+}
+
+// ========== 释放 ==========
+async function releasePhone() {
+    if (!currentViewToken) return;
+    if (!confirm('确定释放该号码？')) return;
+    const r = await fetch('/release-phone', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({view_token: currentViewToken})
+    });
+    const d = await r.json();
+    if (d.ok) {
+        polling = false;
+        if (countdownTimer) clearInterval(countdownTimer);
+        document.getElementById('releaseBtn').textContent = '✅ 已释放';
+        document.getElementById('releaseBtn').disabled = true;
+        document.getElementById('releaseBtn').style.opacity = '0.5';
+        document.getElementById('releaseBtn').style.cursor = 'default';
+        document.getElementById('waitingArea').classList.add('d-none');
+        document.getElementById('errorArea').classList.remove('d-none');
+        document.getElementById('errorArea').textContent = '⏹ 号码已释放';
+        loadBalance();
+    }
+}
+
+// ========== 返回 ==========
+function backToProjects() {
+    polling = false;
+    if (countdownTimer) clearInterval(countdownTimer);
+    currentViewToken = null;
+    document.getElementById('stepSelect').classList.remove('d-none');
+    document.getElementById('stepSMS').classList.add('d-none');
+    loadBalance();
+}
+
+// 初始加载余额
+loadBalance();
+</script>
+<style>.d-none{display:none}.btn-sm{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;font-size:0.9rem;border-radius:8px;font-weight:600;cursor:pointer;text-decoration:none}@keyframes spin{to{transform:rotate(360deg)}}@keyframes codePulse{0%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}.project-item:hover{border-color:#4f46e5 !important;transform:translateX(4px);box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}</style>
+</body>
+</html>

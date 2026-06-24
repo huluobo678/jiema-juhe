@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        <h3>项目管理</h3>
+        <p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道和豪猪项目ID，单独定价</p>
+
+        <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加项目</button>
+
+        <table class="table-modern">
+            <thead><tr><th>ID</th><th>名称</th><th>渠道</th><th>项目ID</th><th>价格</th><th>描述</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for p in projects %}
+            <tr>
+                <td>{{ p.id }}</td>
+                <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.channel_name }}</td>
+                <td><code>{{ p.sid }}</code></td>
+                <td>{{ p.price }} 元</td>
+                <td>{{ p.description or '-' }}</td>
+                <td>
+                    <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--warning);color:white;border:none;border-radius:6px;cursor:pointer" onclick="editProject({{ p.id }})">编辑</button>
+                    <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer" onclick="deleteProject({{ p.id }})">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-modern" id="projectModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;width:520px;max-width:90vw;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+        <div style="background:var(--bg-dark);color:white;padding:16px 24px;border-radius:12px 12px 0 0">
+            <h5 style="margin:0" id="modalTitle">添加项目</h5>
+        </div>
+        <div style="padding:24px">
+            <form id="projectForm">
+                <input type="hidden" name="edit_id" id="editId">
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">项目名称</label><input name="name" id="p_name" class="input-modern" required placeholder="如：淘宝注册"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">选择渠道</label>
+                    <select name="channel_id" id="p_channel_id" class="input-modern" required>
+                        {% for c in channels %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道项目ID (sid)</label><input name="sid" id="p_sid" type="number" class="input-modern" required></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">定价 (元/次)</label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="1.0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">描述</label><input name="description" id="p_desc" class="input-modern"></div>
+            </form>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn-modern btn-outline-modern" onclick="document.getElementById('projectModal').style.display='none'">取消</button>
+            <button class="btn-modern btn-primary-modern" onclick="submitProject()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAdd() {
+    document.getElementById('modalTitle').textContent = '添加项目';
+    document.getElementById('editId').value = '';
+    document.getElementById('p_name').value = '';
+    document.getElementById('p_sid').value = '';
+    document.getElementById('p_price').value = '1.0';
+    document.getElementById('p_desc').value = '';
+    document.getElementById('projectModal').style.display = 'flex';
+}
+async function submitProject() {
+    const editId = document.getElementById('editId').value;
+    const form = document.getElementById('projectForm');
+    const data = new FormData(form);
+    let url = '/admin/projects/add';
+    if (editId) url = '/admin/projects/' + editId + '/edit';
+    const r = await fetch(url, {method:'POST', body:data});
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else alert(d.msg);
+}
+async function editProject(id) {
+    document.getElementById('modalTitle').textContent = '编辑项目';
+    document.getElementById('editId').value = id;
+    document.getElementById('projectModal').style.display = 'flex';
+}
+async function deleteProject(id) {
+    if (!confirm('确定删除？')) return;
+    const r = await fetch('/admin/projects/'+id+'/delete', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) location.reload();
+}
+</script>
+<style>.mb-3{margin-bottom:16px}</style>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渠道管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        <h3>渠道管理</h3>
+        <p style="color:var(--text-muted);margin-bottom:16px">管理接码渠道，配置API登录信息</p>
+
+        <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加渠道</button>
+
+        <table class="table-modern">
+            <thead><tr><th>ID</th><th>名称</th><th>API地址</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for ch in channels %}
+            <tr>
+                <td>{{ ch.id }}</td>
+                <td><strong>{{ ch.name }}</strong></td>
+                <td><code>{{ ch.api_url }}</code></td>
+                <td>{{ '✅ 启用' if ch.enabled else '❌ 禁用' }}</td>
+                <td>
+                    <button class="btn-modern btn-primary-modern" style="padding:6px 16px;font-size:0.85rem" onclick="testLogin({{ ch.id }})">测试登录</button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-modern" id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;width:480px;max-width:90vw;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+        <div style="background:var(--bg-dark);color:white;padding:16px 24px;border-radius:12px 12px 0 0">
+            <h5 style="margin:0">添加渠道</h5>
+        </div>
+        <div style="padding:24px">
+            <form id="addForm">
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道名称</label><input name="name" class="input-modern" required placeholder="如：豪猪"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API地址</label><input name="api_url" class="input-modern" value="https://api.haozhuma.com"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API用户名</label><input name="api_user" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API密码</label><input name="api_pass" type="password" class="input-modern"></div>
+            </form>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn-modern btn-outline-modern" onclick="document.getElementById('addModal').style.display='none'">取消</button>
+            <button class="btn-modern btn-primary-modern" onclick="submitAdd()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAdd() {
+    document.getElementById('addModal').style.display = 'flex';
+}
+async function submitAdd() {
+    const form = document.getElementById('addForm');
+    const data = new FormData(form);
+    const r = await fetch('/admin/channels/add', {method:'POST', body:data});
+    const d = await r.json();
+    if (d.ok) { location.reload(); }
+    else { alert(d.msg); }
+}
+async function testLogin(id) {
+    const r = await fetch('/admin/channels/'+id+'/test-login', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) { alert('✅ 登录成功！\ntoken: ' + d.token); }
+    else { alert('❌ ' + d.msg); }
+}
+</script>
+<style>.mb-3{margin-bottom:16px}</style>
+</body>
+</html>

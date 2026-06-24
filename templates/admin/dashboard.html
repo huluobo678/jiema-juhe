@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 概况</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        <h3>概况</h3>
+        <p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
+
+        <div class="stat-grid">
+            <div class="stat-card" style="border-left:4px solid var(--primary)">
+                <div class="label">渠道数</div>
+                <div class="value" style="color:var(--primary)" id="channelCount">-</div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid var(--success)">
+                <div class="label">项目数</div>
+                <div class="value" style="color:var(--success)" id="projectCount">-</div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid var(--warning)">
+                <div class="label">卡密总数</div>
+                <div class="value" style="color:var(--warning)" id="cardCount">-</div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid var(--primary-light)">
+                <div class="label">收码次数</div>
+                <div class="value" style="color:var(--primary-light)" id="sessionCount">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadStats() {
+    const r = await fetch('/admin/stats?json=1');
+    try {
+        const d = await r.json();
+        if (d.channelCount !== undefined) {
+            document.getElementById('channelCount').textContent = d.channelCount;
+            document.getElementById('projectCount').textContent = d.projectCount;
+            document.getElementById('cardCount').textContent = d.cardCount;
+            document.getElementById('sessionCount').textContent = d.sessionCount;
+        }
+    } catch(e) {}
+}
+loadStats();
+</script>
+</body>
+</html>
