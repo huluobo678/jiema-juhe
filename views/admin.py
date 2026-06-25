@@ -198,6 +198,49 @@ def stats():
     db.close()
     return render_template('admin/stats.html', **locals())
 
+# ========== 公告管理 ==========
+
+@admin_bp.route('/announcements')
+@login_required
+def announcements():
+    db = get_db()
+    rows = db.execute("SELECT * FROM announcements ORDER BY priority DESC, id DESC").fetchall()
+    db.close()
+    return render_template('admin/announcements.html', announcements=rows)
+
+@admin_bp.route('/announcements/add', methods=['POST'])
+@login_required
+def add_announcement():
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    priority = int(request.form.get('priority', 0))
+    if not title or not content:
+        return jsonify({'ok': False, 'msg': '标题和内容不能为空'})
+    db = get_db()
+    db.execute("INSERT INTO announcements (title, content, priority) VALUES (?,?,?)",
+               (title, content, priority))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@admin_bp.route('/announcements/<int:id>/toggle', methods=['POST'])
+@login_required
+def toggle_announcement(id):
+    db = get_db()
+    db.execute("UPDATE announcements SET active = CASE WHEN active=1 THEN 0 ELSE 1 END WHERE id=?", (id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@admin_bp.route('/announcements/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_announcement(id):
+    db = get_db()
+    db.execute("DELETE FROM announcements WHERE id=?", (id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():

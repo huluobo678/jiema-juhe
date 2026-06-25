@@ -1,0 +1,99 @@
+{% extends "admin/dashboard.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📢 公告管理</h5>
+        <button class="btn btn-sm btn-primary" onclick="showAddForm()">➕ 添加公告</button>
+    </div>
+    <div class="card-body">
+        {% if announcements %}
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>标题</th>
+                    <th>内容</th>
+                    <th>优先级</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in announcements %}
+                <tr>
+                    <td>{{ a.id }}</td>
+                    <td>{{ a.title }}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.content }}</td>
+                    <td><span class="badge bg-{{ 'danger' if a.priority>=1 else 'secondary' }}">{{ a.priority }}</span></td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if a.active else 'secondary' }}">
+                            {{ '显示' if a.active else '隐藏' }}
+                        </span>
+                    </td>
+                    <td>{{ a.created_at }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-{{ 'warning' if a.active else 'success' }}" onclick="toggle({{ a.id }})">
+                            {{ '隐藏' if a.active else '显示' }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="del({{ a.id }})">删除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">暂无公告</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加弹窗 -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">添加公告</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="addForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">标题</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">内容</label>
+                        <textarea class="form-control" name="content" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">优先级（0=普通，1=重要）</label>
+                        <select class="form-control" name="priority">
+                            <option value="0">普通</option>
+                            <option value="1">重要</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">发布</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAddForm() { new bootstrap.Modal(document.getElementById('addModal')).show(); }
+document.getElementById('addForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const f = new FormData(this);
+    fetch('/admin/announcements/add', {method:'POST', body:f}).then(r=>r.json()).then(d=>{
+        if(d.ok) location.reload(); else alert(d.msg);
+    });
+});
+function toggle(id) {
+    fetch('/admin/announcements/'+id+'/toggle', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+}
+function del(id) {
+    if(!confirm('确定删除此公告？')) return;
+    fetch('/admin/announcements/'+id+'/delete', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "user/layout.html" %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📢 公告</h5>
+            </div>
+            <div class="card-body">
+                {% if announcements %}
+                    {% for a in announcements %}
+                    <div class="mb-4 pb-3 {{ 'border-bottom' if not loop.last }}">
+                        <h6 class="fw-bold">
+                            {% if a.priority >= 1 %}<span class="badge bg-danger me-1">重要</span>{% endif %}
+                            {{ a.title }}
+                            <small class="text-muted ms-2">发布于 {{ a.created_at }}</small>
+                        </h6>
+                        <p class="mb-0" style="white-space:pre-wrap">{{ a.content }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted text-center mb-0">暂无公告</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

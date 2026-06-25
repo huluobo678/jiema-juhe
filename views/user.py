@@ -62,6 +62,14 @@ def balance():
     db.close()
     return jsonify({'ok': True, 'balance': acc['balance'] if acc else 0})
 
+@user_bp.route('/announcements')
+@user_bp.route('/user/announcements')
+def announcements():
+    db = get_db()
+    rows = db.execute("SELECT * FROM announcements WHERE active=1 ORDER BY priority DESC, id DESC").fetchall()
+    db.close()
+    return render_template('user/announcements.html', announcements=rows)
+
 @user_bp.route('/projects')
 def project_list():
     db = get_db()

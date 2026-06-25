@@ -76,6 +76,16 @@ def init_db():
             username TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL
         );
+
+        -- 公告
+        CREATE TABLE IF NOT EXISTS announcements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            priority INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
+        );
     ''')
     conn.commit()
 

@@ -10,6 +10,7 @@
 <div class="admin-layout">
     <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
     <div class="main-content">
+        {% block content %}
         <h3>概况</h3>
         <p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
 
@@ -31,6 +32,7 @@
                 <div class="value" style="color:var(--primary-light)" id="sessionCount">-</div>
             </div>
         </div>
+        {% endblock %}
     </div>
 </div>
 
