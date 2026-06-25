@@ -3,11 +3,11 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
-from models import get_db, dict_factory
+from models import get_db
 
 def _get_config(key, default=''):
     db = get_db()
-    db.row_factory = dict_factory
+    db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
     row = db.execute("SELECT value FROM site_config WHERE key=?", (key,)).fetchone()
     db.close()
     return row['value'] if row and row['value'] else default
