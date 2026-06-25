@@ -2,169 +2,160 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ page_title|default('云枢速联') }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* 用户前台侧边栏特定样式 */
-        .user-layout { display: flex; min-height: 100vh; }
-        .user-sidebar {
-            width: 230px; flex-shrink: 0;
-            background: #fff;
-            border-right: 1px solid #e2e8f0;
-            display: flex; flex-direction: column;
-            position: sticky; top: 0; height: 100vh; overflow-y: auto;
+        * { box-sizing: border-box; }
+        body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background:#f8fafc; }
+
+        /* ===== 顶部导航栏 ===== */
+        .top-bar {
+            position: fixed; top:0; left:0; right:0; z-index:100;
+            height: 56px; background:#fff; border-bottom:1px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px;
         }
-        .user-sidebar .sidebar-logo {
-            padding: 22px 20px 18px;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 1.1rem; font-weight: 700; color: #0f172a;
-            display: flex; align-items: center; gap: 8px;
+        .top-bar .top-left { display:flex; align-items:center; gap:12px; }
+        .top-bar .hamburger {
+            display:flex; align-items:center; justify-content:center;
+            width:36px; height:36px; border-radius:8px; border:1px solid #e2e8f0;
+            background:#fff; cursor:pointer; color:#475569; font-size:1.3rem; line-height:1;
         }
-        .user-sidebar .sidebar-logo svg { width: 22px; height: 22px; flex-shrink: 0; }
-        .user-sidebar .sidebar-logo span { background: linear-gradient(135deg, #0f172a, #334155); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .user-nav { padding: 8px 0; flex: 1; }
-        .user-nav a, .user-nav .nav-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 11px 20px; color: #475569; font-size: 0.9rem;
-            text-decoration: none; transition: all 0.15s; cursor: pointer; position: relative;
+        .top-bar .top-logo {
+            font-size:1.05rem; font-weight:700; color:#0f172a;
+            background:linear-gradient(135deg,#0f172a,#334155); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
         }
-        .user-nav a:hover { background: #f1f5f9; color: #1e293b; }
-        .user-nav a.active, .user-nav .nav-item.active {
-            background: #ecfdf5; color: #059669;
+        .top-bar .top-right { display:flex; align-items:center; gap:16px; }
+        .top-bar .top-balance {
+            font-size:0.88rem; color:#475569; white-space:nowrap;
+            background:#f0fdf4; padding:6px 14px; border-radius:20px;
+            border:1px solid #bbf7d0;
         }
-        .user-nav a.active svg, .user-nav .nav-item.active svg { color: #059669; }
-        .user-nav a svg, .user-nav .nav-item svg {
-            width: 18px; height: 18px; flex-shrink: 0; color: #94a3b8; transition: color 0.15s;
+        .top-bar .top-balance strong { color:#059669; font-size:1rem; }
+
+        /* ===== 主体布局 ===== */
+        .body-layout { display:flex; margin-top:56px; min-height:calc(100vh - 56px); }
+
+        /* ===== 侧边栏 ===== */
+        .sidebar {
+            width:220px; flex-shrink:0;
+            background:#fff; border-right:1px solid #e2e8f0;
+            padding:8px 0; overflow-y:auto;
+            position:sticky; top:56px; height:calc(100vh - 56px);
         }
-        .user-nav a.active svg, .user-nav .nav-item.active svg { color: #059669; }
-        .user-nav a .badge, .user-nav .nav-item .badge {
-            margin-left: auto; background: #ef4444; color: #fff;
-            font-size: 0.7rem; padding: 1px 7px; border-radius: 10px; font-weight: 600;
+        .sidebar a, .sidebar .nav-item {
+            display:flex; align-items:center; gap:10px;
+            padding:11px 18px; color:#475569; font-size:0.88rem;
+            text-decoration:none; transition:all 0.15s; cursor:pointer;
         }
-        /* 子菜单 */
-        .sub-nav { display: none; padding: 0; }
-        .sub-nav.open { display: block; }
-        .sub-nav a {
-            padding-left: 50px !important; font-size: 0.85rem !important;
+        .sidebar a:hover, .sidebar .nav-item:hover { background:#f1f5f9; color:#1e293b; }
+        .sidebar a.active, .sidebar .nav-item.active { background:#ecfdf5; color:#059669; }
+        .sidebar a.active svg, .sidebar .nav-item.active svg { color:#059669; }
+        .sidebar a svg, .sidebar .nav-item svg {
+            width:17px; height:17px; flex-shrink:0; color:#94a3b8; transition:color 0.15s;
         }
-        /* 下拉箭头 */
-        .nav-arrow {
-            margin-left: auto; font-size: 0.65rem; color: #94a3b8; transition: transform 0.2s;
+        .sidebar a.active svg, .sidebar .nav-item.active svg { color:#059669; }
+        .sidebar a .badge, .sidebar .nav-item .badge {
+            margin-left:auto; background:#ef4444; color:#fff;
+            font-size:0.68rem; padding:1px 7px; border-radius:10px; font-weight:600;
         }
-        .nav-arrow.open { transform: rotate(180deg); }
-        /* 用户信息栏 */
-        .user-sidebar .sidebar-footer {
-            padding: 16px 20px; border-top: 1px solid #f1f5f9;
+        .sidebar .sub-nav { display:none; padding:0; }
+        .sidebar .sub-nav.open { display:block; }
+        .sidebar .sub-nav a { padding-left:46px !important; font-size:0.84rem !important; }
+        .sidebar .nav-arrow { margin-left:auto; font-size:0.6rem; color:#94a3b8; transition:transform 0.2s; }
+        .sidebar .nav-arrow.open { transform:rotate(180deg); }
+        .sidebar .nav-divider { height:1px; background:#e2e8f0; margin:6px 16px; }
+
+        /* ===== 内容区 ===== */
+        .content {
+            flex:1; padding:24px 28px; min-height:calc(100vh - 56px);
+            max-width:1100px;
         }
-        .user-sidebar .sidebar-footer .balance-row {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 6px; font-size: 0.85rem; color: #64748b;
-        }
-        .user-sidebar .sidebar-footer .balance-row .amount {
-            font-weight: 700; color: #059669; font-size: 1rem;
-        }
-        /* 导航分割线 */
-        .nav-divider { height:1px; background:#e2e8f0; margin:6px 16px; }
-        /* 用户内容区 */
-        .user-content {
-            flex: 1; background: #f8fafc; padding: 28px 32px; min-height: 100vh; max-width: 1100px;
-        }
-        .user-content .page-header {
-            margin-bottom: 24px;
-        }
-        .user-content .page-header h2 {
-            font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 0 0 4px;
-        }
-        .user-content .page-header p {
-            font-size: 0.85rem; color: #94a3b8; margin: 0;
-        }
-        /* 移动端响应式 */
+        .content .page-header { margin-bottom:20px; }
+        .content .page-header h2 { font-size:1.3rem; font-weight:700; color:#0f172a; margin:0 0 2px; }
+        .content .page-header p { font-size:0.82rem; color:#94a3b8; margin:0; }
+
+        /* ===== 移动端遮罩 ===== */
+        .sidebar-overlay { display:none; }
+
+        /* ===== 移动端响应式 ===== */
         @media (max-width: 768px) {
-            .user-layout { flex-direction: column; }
-            .user-sidebar { width: 100%; height: auto; position: static; }
-            .user-nav { display: none; }
-            .user-nav.mobile-open { display: block; }
-            .user-content { padding: 20px 16px; }
-            .hamburger { display: flex !important; }
-        }
-        .hamburger {
-            display: none; align-items: center; justify-content: center;
-            width: 36px; height: 36px; cursor: pointer; border-radius: 8px;
-            border: 1px solid #e2e8f0; background: #fff;
-        }
-        .user-sidebar .sidebar-top {
-            display: flex; align-items: center; justify-content: space-between; padding: 12px 20px;
-            border-bottom: 1px solid #f1f5f9;
+            .top-bar { padding:0 12px; }
+            .sidebar-overlay {
+                display:none; position:fixed; inset:0; z-index:50;
+                background:rgba(0,0,0,0.4);
+            }
+            .sidebar-overlay.open { display:block; }
+            .sidebar {
+                position:fixed; top:56px; left:-240px; width:220px; z-index:60;
+                height:calc(100vh - 56px); transition:left 0.25s ease;
+                box-shadow:2px 0 12px rgba(0,0,0,0.1);
+            }
+            .sidebar.open { left:0; }
+            .content { padding:16px; width:100%; }
         }
         @media (min-width: 769px) {
-            .user-sidebar .sidebar-top { display: none; }
+            .top-bar .hamburger { display:none; }
         }
     </style>
 </head>
 <body>
-<div class="user-layout">
-    <!-- 侧边栏 -->
-    <div class="user-sidebar">
-        <div class="sidebar-top">
-            <div class="sidebar-logo" style="border:none;padding:0">
-                <span>云枢速联</span>
-            </div>
+<div class="app-layout">
+    <!-- 顶部导航栏 -->
+    <div class="top-bar">
+        <div class="top-left">
             <div class="hamburger" onclick="toggleMobileNav()">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </div>
+            <span class="top-logo">云枢速联</span>
         </div>
-        <div class="sidebar-logo" style="border-bottom:1px solid #f1f5f9">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            <span>云枢速联</span>
-        </div>
-        <div class="user-nav" id="mainNav">
-            <!-- 菜单由各页面注入的 nav_items 常量渲染，但保留静态备份以备JS直出 -->
-            {% block sidebar %}{% endblock %}
-        </div>
-        <div class="sidebar-footer">
-            <div class="balance-row">
-                <span>余额</span>
-                <span class="amount" id="sideBalance">¥{{ balance|default(0) }}</span>
+        <div class="top-right">
+            <div class="top-balance">
+                余额 <strong id="topBalance">¥{{ balance|default('0.00') }}</strong>
             </div>
         </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="user-content">
-        {% block content %}{% endblock %}
+    <!-- 遮罩（移动端） -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileNav()"></div>
+
+    <!-- 主体 -->
+    <div class="body-layout">
+        <div class="sidebar" id="mainNav">
+            {% block sidebar %}{% endblock %}
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
     </div>
 </div>
 
 <script>
 function toggleMobileNav() {
-    document.getElementById('mainNav').classList.toggle('mobile-open');
+    document.getElementById('mainNav').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
 }
-// 子菜单切换
+
 function toggleSub(btn) {
     var sub = btn.nextElementSibling;
     var arrow = btn.querySelector('.nav-arrow');
-    if (sub) {
-        sub.classList.toggle('open');
-        if (arrow) arrow.classList.toggle('open');
-    }
+    if (sub) { sub.classList.toggle('open'); if (arrow) arrow.classList.toggle('open'); }
 }
-// 余额更新
+
 function refreshBalance() {
-    fetch('/balance').then(r=>r.json()).then(d=>{
-        if(d.ok) {
-            document.getElementById('sideBalance').textContent = '¥' + d.balance;
-        }
+    fetch('/balance').then(function(r){return r.json()}).then(function(d){
+        if(d.ok) document.getElementById('topBalance').textContent = '¥' + d.balance;
     });
 }
-// 高亮当前菜单
+
+// 高亮当前菜单 + 展开子菜单
 document.addEventListener('DOMContentLoaded', function() {
     var path = window.location.pathname;
-    document.querySelectorAll('.user-nav a').forEach(function(a) {
+    document.querySelectorAll('.sidebar a').forEach(function(a) {
         var href = a.getAttribute('href');
-        if (href && (path === href || path.startsWith(href + '/') || (path === '/' && href === '/'))) {
+        if (href && (path===href || (path==='/' && href==='/'))) {
             a.classList.add('active');
-            // 如果是子菜单，展开父级
             var parent = a.closest('.sub-nav');
             if (parent) {
                 parent.classList.add('open');

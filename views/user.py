@@ -10,7 +10,16 @@ user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/')
 def index():
-    """首页 - 兑换+项目一体"""
+    """首页 - 项目选择"""
+    # 跟踪邀请链接
+    ref = request.args.get('ref', '').strip()
+    if ref:
+        resp = __import__('flask').make_response()
+        resp.set_cookie('invited_by', ref, max_age=30*24*3600)
+        # 重定向去掉 ref 参数，但保持路径
+        from flask import redirect
+        return redirect('/', 302)
+    
     db = get_db()
     projects = db.execute("""
         SELECT p.id, p.name, p.price, p.base_price, c.markup_percent, c.name as channel_name
@@ -28,7 +37,6 @@ def index():
 def redeem():
     """兑换卡密"""
     code = request.form.get('code', '').strip()
-    referred_by = request.form.get('referred_by', '').strip()
     if not code:
         return jsonify({'ok': False, 'msg': '请输入卡密'})
 
@@ -41,20 +49,14 @@ def redeem():
     db.execute("UPDATE cards SET used=1, used_at=datetime('now','localtime') WHERE id=?", (card['id'],))
 
     account_token = request.cookies.get('account_token')
+    
+    # 检查邀请关系：从cookie获取邀请人
+    invited_by = request.cookies.get('invited_by', '').strip()
     final_referred_by = None
-
-    # 如果填了推荐人，检查双方邮箱验证状态
-    if referred_by:
-        referrer = db.execute("SELECT * FROM accounts WHERE token=?", (referred_by,)).fetchone()
-        if not referrer:
-            return jsonify({'ok': False, 'msg': '推荐人 Token 无效'})
-        if not referrer.get('email_verified'):
-            return jsonify({'ok': False, 'msg': '推荐人未绑定邮箱，暂不可返利。请先通知推荐人绑定QQ邮箱'})
-        if account_token:
-            cur_acc = db.execute("SELECT email_verified FROM accounts WHERE token=?", (account_token,)).fetchone()
-            if cur_acc and not cur_acc['email_verified']:
-                return jsonify({'ok': False, 'msg': '请先绑定QQ邮箱再填写推荐人。前往「绑定邮箱」菜单操作'})
-        final_referred_by = referred_by
+    if invited_by:
+        referrer = db.execute("SELECT * FROM accounts WHERE token=? AND email_verified=1", (invited_by,)).fetchone()
+        if referrer and referrer.get('email_verified'):
+            final_referred_by = invited_by
 
     if account_token:
         acc = db.execute("SELECT * FROM accounts WHERE token=?", (account_token,)).fetchone()
@@ -369,14 +371,17 @@ def user_account():
     account_token = request.cookies.get('account_token')
     email = None
     referred_by = None
+    invite_link = None
     if account_token:
         db = get_db()
         acc = db.execute("SELECT email, referred_by FROM accounts WHERE token=?", (account_token,)).fetchone()
         if acc:
             email = acc['email']
             referred_by = acc['referred_by']
+            if email:
+                invite_link = SITE_URL.rstrip('/') + '/?ref=' + account_token
         db.close()
-    return render_template('user/account.html', email=email, referred_by=referred_by)
+    return render_template('user/account.html', email=email, referred_by=referred_by, invite_link=invite_link)
 
 @user_bp.route('/logout')
 def logout():

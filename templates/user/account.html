@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <h2>👤 账户信息</h2>
-    <p>查看账户详情与邀请返利说明</p>
+    <p>查看账户详情与邀请返利</p>
 </div>
 <div style="display:flex;flex-wrap:wrap;gap:20px">
     <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
@@ -12,20 +12,28 @@
         <div class="info-row"><span class="label">余额</span><span class="val">¥<strong id="accBalance">{{ balance|default(0) }}</strong></span></div>
         <div class="info-row"><span class="label">已绑定邮箱</span><span class="val" id="accEmail">{{ email or '未绑定' }}</span></div>
         <div class="info-row"><span class="label">推荐人</span><span class="val">{{ referred_by or '无' }}</span></div>
-        <div class="info-row"><span class="label">邀请返利状态</span>
-            <span class="val" style="color:{{ '#059669' if email else '#dc2626' }}">{{ '✅ 已激活（绑定QQ邮箱即可返利）' if email else '❌ 未激活（绑定QQ邮箱即可参与返利）' }}</span>
+        <div class="info-row"><span class="label">返利状态</span>
+            <span class="val" style="color:{{ '#059669' if email else '#dc2626' }}">{{ '✅ 已激活' if email else '❌ 未激活' }}</span>
         </div>
-        <div class="info-row"><span class="label">返利率</span><span class="val">5%</span></div>
     </div>
-    <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🎁 邀请返利说明</h3>
-        <ul style="padding-left:18px;color:#475569;line-height:1.8;font-size:0.9rem">
-            <li><strong>条件</strong>：必需先绑定 <strong>QQ 邮箱</strong>（@qq.com）才能参与返利</li>
-            <li>绑定邮箱后在兑换卡密时填写推荐人 Token，推荐人可获得被推荐人充值金额的 <strong>5%</strong> 返利</li>
-            <li>返利会实时充入推荐人账户余额</li>
-            <li>自己在注册时填写的推荐人不可更改</li>
-            <li>如需绑定邮箱，请点击左侧「绑定邮箱」菜单</li>
+    <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)" id="invite-link">
+        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">🔗 我的邀请链接</h3>
+        {% if invite_link %}
+        <div style="margin-bottom:12px">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;word-break:break-all;font-size:0.85rem;color:#166534;cursor:pointer" onclick="copyInvite()" id="inviteUrl">{{ invite_link }}</div>
+        </div>
+        <button onclick="copyInvite()" style="padding:10px 20px;background:#059669;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.88rem;width:100%">📋 复制邀请链接</button>
+        <p id="copyHint" style="font-size:0.8rem;color:#94a3b8;margin:8px 0 0;text-align:center"></p>
+        <ul style="padding-left:18px;color:#475569;line-height:1.8;font-size:0.85rem;margin-top:16px">
+            <li>分享链接给好友，好友通过链接访问本站兑换卡密后，你将获得其充值金额的 <strong>5%</strong> 返利</li>
+            <li>注意：好友填写 QQ 邮箱绑定时才会自动建立邀请关系</li>
+            <li>返利实时充入你的余额</li>
         </ul>
+        {% else %}
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;color:#991b1b;font-size:0.88rem">
+            绑定 QQ 邮箱后才会生成邀请链接，<a href="/register" style="color:#059669;font-weight:600">去绑定 →</a>
+        </div>
+        {% endif %}
     </div>
 </div>
 <style>
@@ -40,5 +48,23 @@
 fetch('/balance').then(r=>r.json()).then(d=>{
     if(d.ok) document.getElementById('accBalance').textContent = d.balance;
 });
+
+function copyInvite() {
+    var el = document.getElementById('inviteUrl');
+    var text = el.textContent.trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            document.getElementById('copyHint').textContent = '✅ 已复制到剪贴板';
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        document.getElementById('copyHint').textContent = '✅ 已复制到剪贴板';
+    }
+}
 </script>
 {% endblock %}

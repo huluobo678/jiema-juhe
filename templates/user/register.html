@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <h2>📧 绑定 QQ 邮箱</h2>
-    <p>绑定后即可参与<strong>邀请返利</strong>（需使用 @qq.com 邮箱）</p>
+    <p>绑定后自动生成邀请链接，分享给好友享 5% 返利</p>
 </div>
 <div style="display:flex;flex-wrap:wrap;gap:20px">
     <div style="flex:1;min-width:300px;max-width:460px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
@@ -22,11 +22,10 @@
     <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
         <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">🎁 邀请返利说明</h3>
         <ul style="padding-left:18px;color:#475569;line-height:1.9;font-size:0.9rem">
-            <li><strong>必需条件</strong>：绑定 <strong>@qq.com</strong> 邮箱后才可参与邀请返利</li>
-            <li>绑定后→在<strong>仪表盘</strong>兑换卡密时填写「推荐人Token」，即可计入返利</li>
-            <li>返利金额为被推荐人充值额的 <strong>5%</strong>，实时到账</li>
-            <li>推荐人需保持邮箱已验证状态</li>
-            <li>点击「账户信息」可查看返利状态</li>
+            <li>绑定 QQ 邮箱后自动生成<strong>专属邀请链接</strong></li>
+            <li>分享链接给好友 → 好友通过链接访问并绑定邮箱 → 邀请关系建立</li>
+            <li>好友后续充值金额的 <strong>5%</strong> 实时返利到你的余额</li>
+            <li>绑定后在「账户信息」页面查看和复制邀请链接</li>
         </ul>
     </div>
 </div>
@@ -73,7 +72,7 @@ async function bindEmail() {
     const r = await fetch('/register', {method:'POST', body: form});
     const d = await r.json();
     showResult(d.ok, d.msg);
-    if (d.ok) { setTimeout(() => window.location.href = '/', 1500); }
+    if (d.ok) { setTimeout(() => window.location.href = '/user/account', 1500); }
 }
 
 function showResult(ok, msg) {
