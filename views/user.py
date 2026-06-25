@@ -1,4 +1,4 @@
-"""前台用户路由"""
+﻿"""前台用户路由"""
 import uuid, random
 from flask import Blueprint, render_template, request, jsonify, abort
 from models import get_db, calculate_final_price
@@ -133,6 +133,45 @@ def channel_status():
     status = health_checker.status() if health_checker else []
     return jsonify({'ok': True, 'channels': status})
 
+# ========== 统计数据 API ==========
+
+@user_bp.route('/today-count')
+def today_count():
+    """今日成功收码次数"""
+    token = request.cookies.get('account_token')
+    db = get_db()
+    r = db.execute("""SELECT COUNT(*) as cnt FROM sms_sessions
+                     WHERE account_token=? AND status='received'
+                     AND date(received_at)=date('now','localtime')""", (token,)).fetchone()
+    db.close()
+    return jsonify({'ok': True, 'count': r[0] if r and r[0] else 0})
+
+
+@user_bp.route('/recent-sms')
+def recent_sms():
+    """最近收码记录"""
+    token = request.cookies.get('account_token')
+    if not token:
+        return jsonify({'ok': True, 'list': []})
+    db = get_db()
+    rows = db.execute("""SELECT s.phone, s.code, s.received_at, s.status, p.name as project
+                        FROM sms_sessions s
+                        JOIN projects p ON s.project_id=p.id
+                        WHERE s.account_token=?
+                        ORDER BY s.id DESC LIMIT 10""", (token,)).fetchall()
+    db.close()
+    items = []
+    for r in rows:
+        items.append({
+            'phone': r['phone'],
+            'code': r['code'] if r['status'] == 'received' else '',
+            'time': r['received_at'] if r['received_at'] else '',
+            'project': r['project'],
+            'status': r['status'],
+        })
+    return jsonify({'ok': True, 'list': items})
+
+
 # ========== 核心业务：获取号码 ==========
 
 @user_bp.route('/start-order', methods=['POST'])
@@ -152,7 +191,11 @@ def start_order():
         db.close()
         return jsonify({'ok': False, 'msg': '参数错误'})
 
-    total_price = calculate_final_price(project['price'], project.get('base_price', 0), 0)
+    base_price = project['base_price'] if 'base_price' in project.keys() else 0
+    # 获取渠道加价率
+    ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
+    markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
+    total_price = calculate_final_price(project['price'], base_price, markup)
 
     if float(acc['balance']) < total_price:
         db.close()
@@ -181,13 +224,12 @@ def start_order():
         ch.release()
         msg = phone_data.get('msg', '获取号码失败')
         if '余额' in msg or '余额不足' in msg:
-            msg = '没有账号'
+            msg = '请充值'
         db.close()
         return jsonify({'ok': False, 'msg': msg})
 
-    # 扣款
+    # 收码成功后再扣款（在 api_sms 中）
     channel_id = ch.channel_id
-    db.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (total_price, account_token))
 
     phone = phone_data['phone']
     view_token = uuid.uuid4().hex
@@ -195,9 +237,9 @@ def start_order():
     # 绑定粘性会话
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, view_token, status)
-                  VALUES (?,?,?,?,?, 'waiting')""",
-              (account_token, project_id, channel_id, phone, view_token))
+    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, view_token, status, cost)
+                  VALUES (?,?,?,?,?, 'waiting', ?)""",
+              (account_token, project_id, channel_id, phone, view_token, total_price))
     db.commit()
     db.close()
 
@@ -208,11 +250,16 @@ def start_order():
 @user_bp.route('/api/sms/<view_token>')
 def api_sms(view_token):
     """轮询验证码"""
+    account_token = request.cookies.get('account_token')
     db = get_db()
     s = db.execute("SELECT * FROM sms_sessions WHERE view_token=?", (view_token,)).fetchone()
     if not s:
         db.close()
         return jsonify({'ok': False, 'msg': '会话不存在'})
+
+    if s['account_token'] != account_token:
+        db.close()
+        return jsonify({'ok': False, 'msg': '无权访问此会话'})
 
     if s['status'] == 'received':
         db.close()
@@ -246,9 +293,9 @@ def api_sms(view_token):
     if data.get('code') == 0 or data.get('code') == '0':
         code = data.get('yzm', '')
         sms_content = data.get('sms', '')
-        final_price = calculate_final_price(project['price'], project.get('base_price', 0),
-                                            channel.get('markup_percent', 0) if channel else 0)
         db2 = get_db()
+        # 收码时扣款（使用下单时锁定的价格）
+        final_price = s['cost'] or 0
         db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (final_price, s['account_token']))
         db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
                        WHERE id=?""", (code, sms_content, s['id']))
@@ -258,7 +305,7 @@ def api_sms(view_token):
 
     err_msg = data.get('msg') or ''
     if '余额' in err_msg or '余额不足' in err_msg:
-        return jsonify({'ok': False, 'msg': '没有账号'})
+        return jsonify({'ok': False, 'msg': '请充值'})
 
     return jsonify({'ok': False, 'msg': '等待验证码中...', 'waiting': True})
 
@@ -276,6 +323,10 @@ def release_phone():
     if not s:
         db.close()
         return jsonify({'ok': False, 'msg': '会话不存在'})
+
+    if s['account_token'] != account_token:
+        db.close()
+        return jsonify({'ok': False, 'msg': '无权访问此会话'})
 
     project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
     db.close()

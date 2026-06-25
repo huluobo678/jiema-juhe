@@ -1,99 +1,91 @@
-{% extends "admin/dashboard.html" %}
-{% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">📢 公告管理</h5>
-        <button class="btn btn-sm btn-primary" onclick="showAddForm()">➕ 添加公告</button>
-    </div>
-    <div class="card-body">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公告管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        <h3>📢 公告管理</h3>
+        <p style="color:var(--text-muted);margin-bottom:16px">发布和管理前台公告</p>
+
+        <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">➕ 添加公告</button>
+
         {% if announcements %}
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>标题</th>
-                    <th>内容</th>
-                    <th>优先级</th>
-                    <th>状态</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
+        <table class="table-modern">
+            <thead><tr><th>ID</th><th>标题</th><th>内容</th><th>优先级</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
             <tbody>
                 {% for a in announcements %}
                 <tr>
                     <td>{{ a.id }}</td>
-                    <td>{{ a.title }}</td>
+                    <td><strong>{{ a.title }}</strong></td>
                     <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.content }}</td>
-                    <td><span class="badge bg-{{ 'danger' if a.priority>=1 else 'secondary' }}">{{ a.priority }}</span></td>
-                    <td>
-                        <span class="badge bg-{{ 'success' if a.active else 'secondary' }}">
-                            {{ '显示' if a.active else '隐藏' }}
-                        </span>
-                    </td>
-                    <td>{{ a.created_at }}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-{{ 'warning' if a.active else 'success' }}" onclick="toggle({{ a.id }})">
-                            {{ '隐藏' if a.active else '显示' }}
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="del({{ a.id }})">删除</button>
+                    <td><span style="background:{{ '#dc2626' if a.priority>=1 else '#94a3b8' }};color:#fff;padding:2px 10px;border-radius:10px;font-size:0.8rem">{{'重要' if a.priority>=1 else '普通'}}</span></td>
+                    <td><span style="background:{{ '#22c55e' if a.active else '#94a3b8' }};color:#fff;padding:2px 10px;border-radius:10px;font-size:0.8rem">{{'显示' if a.active else '隐藏'}}</span></td>
+                    <td style="color:#64748b;font-size:0.85rem">{{ a.created_at }}</td>
+                    <td style="white-space:nowrap">
+                        <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:{{ '#f59e0b' if a.active else '#22c55e' }};color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="toggleAnn({{ a.id }})">{{'隐藏' if a.active else '显示'}}</button>
+                        <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="delAnn({{ a.id }})">删除</button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p class="text-muted">暂无公告</p>
+        <p style="color:#94a3b8;padding:20px 0">暂无公告</p>
         {% endif %}
     </div>
 </div>
 
-<!-- 添加弹窗 -->
-<div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">添加公告</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<!-- 添加公告弹窗 -->
+<div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;width:500px;max-width:90vw;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+        <div style="background:#1e293b;color:white;padding:16px 24px;border-radius:12px 12px 0 0">
+            <h5 style="margin:0">添加公告</h5>
+        </div>
+        <div style="padding:24px">
             <form id="addForm">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">标题</label>
-                        <input type="text" class="form-control" name="title" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">内容</label>
-                        <textarea class="form-control" name="content" rows="4" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">优先级（0=普通，1=重要）</label>
-                        <select class="form-control" name="priority">
-                            <option value="0">普通</option>
-                            <option value="1">重要</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">发布</button>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">标题</label><input type="text" name="title" class="input-modern" required></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">内容</label><textarea name="content" class="input-modern" rows="4" required style="width:100%;resize:vertical"></textarea></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">优先级</label>
+                    <select name="priority" class="input-modern">
+                        <option value="0">普通</option>
+                        <option value="1">重要</option>
+                    </select>
                 </div>
             </form>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn-modern btn-outline-modern" onclick="document.getElementById('addModal').style.display='none'">取消</button>
+            <button class="btn-modern btn-primary-modern" onclick="submitAdd()">发布</button>
         </div>
     </div>
 </div>
 
 <script>
-function showAddForm() { new bootstrap.Modal(document.getElementById('addModal')).show(); }
-document.getElementById('addForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const f = new FormData(this);
-    fetch('/admin/announcements/add', {method:'POST', body:f}).then(r=>r.json()).then(d=>{
-        if(d.ok) location.reload(); else alert(d.msg);
-    });
-});
-function toggle(id) {
-    fetch('/admin/announcements/'+id+'/toggle', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+function showAdd() { document.getElementById('addModal').style.display = 'flex'; }
+async function submitAdd() {
+    const f = new FormData(document.getElementById('addForm'));
+    const r = await fetch('/admin/announcements/add', {method:'POST', body:f});
+    const d = await r.json();
+    if (d.ok) location.reload(); else alert(d.msg);
 }
-function del(id) {
-    if(!confirm('确定删除此公告？')) return;
-    fetch('/admin/announcements/'+id+'/delete', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); });
+async function toggleAnn(id) {
+    const r = await fetch('/admin/announcements/'+id+'/toggle', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) location.reload();
+}
+async function delAnn(id) {
+    if (!confirm('确定删除此公告？')) return;
+    const r = await fetch('/admin/announcements/'+id+'/delete', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) location.reload();
 }
 </script>
-{% endblock %}
+<style>.mb-3{margin-bottom:16px}</style>
+</body>
+</html>

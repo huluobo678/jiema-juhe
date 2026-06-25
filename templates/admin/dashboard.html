@@ -32,25 +32,31 @@
             </div>
         </div>
 
+        <!-- 上游余额面板 -->
+        <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
+            <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">💰 上游余额 <span id="balanceTime" style="font-size:0.75rem;color:#94a3b8;font-weight:400"></span></h3>
+            <div id="balanceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+                <div style="text-align:center;color:#94a3b8;padding:20px">加载中...</div>
+            </div>
+        </div>
+
         <!-- 渠道状态面板 -->
         <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
             <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🔌 渠道状态</h3>
-            <div id="channelStatusPanel">
-                <table class="table-modern" style="width:100%">
-                    <thead>
-                        <tr>
-                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">渠道</th>
-                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">状态</th>
-                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">熔断器</th>
-                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">并发</th>
-                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">最后健康</th>
-                        </tr>
-                    </thead>
-                    <tbody id="channelStatusBody">
-                        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">加载中...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <table class="table-modern" style="width:100%">
+                <thead>
+                    <tr>
+                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">渠道</th>
+                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">状态</th>
+                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">熔断器</th>
+                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">并发</th>
+                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">最后健康</th>
+                    </tr>
+                </thead>
+                <tbody id="channelStatusBody">
+                    <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">加载中...</td></tr>
+                </tbody>
+            </table>
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:32px 0">
@@ -107,6 +113,27 @@ async function loadChannelStatus() {
     }
 }
 
+async function loadBalances() {
+    try {
+        const r = await fetch('/admin/channel-balances');
+        const d = await r.json();
+        const grid = document.getElementById('balanceGrid');
+        document.getElementById('balanceTime').textContent = '🔄 ' + new Date().toLocaleTimeString();
+        if (!d.ok || !d.balances || d.balances.length === 0) {
+            grid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">暂无渠道</div>';
+            return;
+        }
+        grid.innerHTML = d.balances.map(function(b) {
+            var color = b.balance > 0 ? '#059669' : '#ef4444';
+            return '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0">' +
+                '<div style="font-size:0.8rem;color:#64748b;margin-bottom:4px">' + b.name + '</div>' +
+                '<div style="font-size:1.5rem;font-weight:700;color:'+color+'">¥' + b.balance.toFixed(2) + '</div></div>';
+        }).join('');
+    } catch(e) {
+        document.getElementById('balanceGrid').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px">加载失败</div>';
+    }
+}
+
 async function deploy() {
     const btn = document.querySelector('button[onclick="deploy()"]');
     const status = document.getElementById('deployStatus');
@@ -133,7 +160,9 @@ async function deploy() {
 
 loadStats();
 loadChannelStatus();
+loadBalances();
 setInterval(loadChannelStatus, 10000);
+setInterval(loadBalances, 30000);
 </script>
 </body>
 </html>

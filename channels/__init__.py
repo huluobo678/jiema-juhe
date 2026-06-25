@@ -2,8 +2,7 @@
 import threading
 from .base import ChannelRegistry, registry as _registry
 
-# 这里会动态加载，延迟到 init_channels() 执行
-_registry = ChannelRegistry()
+# get_registry returns the shared singleton from base.py
 
 def get_registry() -> ChannelRegistry:
     return _registry
@@ -23,8 +22,8 @@ def init_channels(db):
             'api_url': row['api_url'],
             'api_user': row['api_user'] or '',
             'api_pass': row['api_pass'] or '',
-            'token': row.get('token') or '',
-            'concurrent_limit': row.get('concurrent_limit', 5),
+            'token': row['token'] if 'token' in row.keys() else '',
+            'concurrent_limit': row['concurrent_limit'] if 'concurrent_limit' in row.keys() else 5,
             'channel_id': row['id'],
         }
         

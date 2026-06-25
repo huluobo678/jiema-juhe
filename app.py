@@ -61,24 +61,21 @@ def inject_globals():
         db.close()
     return ctx
 
+# ---- 启动时初始化 (gunicorn 兼容: 走 import 而非 __main__) ----
+# 先把 db 表建好
+init_db()
+# 再注册渠道
+from models import get_db
+_db = get_db()
+init_channels(_db)
+_db.close()
+# 启动健康检查器
+init_health_checker(get_registry())
+print("OI - 数据库初始化完成, 渠道注册 & 健康检查器已启动")
+for ch in get_registry().get_all():
+    print(f"I 渠道 {ch.name}: {'活' if ch.alive else '死'}, 并发 {ch.concurrency}/{ch.max_concurrency}")
+
 if __name__ == '__main__':
-    init_db()
-    print("OK - 数据库初始化完成")
-    
-    # 初始化渠道适配器
-    from models import get_db
-    _db = get_db()
-    init_channels(_db)
-    _db.close()
-    
-    # 启动健康检查器
-    init_health_checker(get_registry())
-    print("OK - 渠道注册 & 健康检查器已启动")
-    
-    # 打印渠道状态
-    for ch in get_registry().get_all():
-        print(f"  渠道 {ch.name}: {'活' if ch.alive else '死'}, 并发 {ch.concurrency}/{ch.max_concurrency}")
     print("Front: http://127.0.0.1:5000")
     print("Admin: http://127.0.0.1:5000/admin")
-    print("Default admin: admin / admin123")
     app.run(host='0.0.0.0', port=5000, debug=False)

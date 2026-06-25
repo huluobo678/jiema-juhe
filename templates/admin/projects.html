@@ -16,12 +16,13 @@
         <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加项目</button>
 
         <table class="table-modern">
-            <thead><tr><th>ID</th><th>名称</th><th>渠道</th><th>项目ID</th><th>价格</th><th>定价方式</th><th>描述</th><th>操作</th></tr></thead>
+            <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>项目ID</th><th>价格</th><th>定价方式</th><th>描述</th><th>操作</th></tr></thead>
             <tbody>
             {% for p in projects %}
             <tr>
                 <td>{{ p.id }}</td>
                 <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.category or '-' }}</td>
                 <td>{{ p.channel_name }}</td>
                 <td><code>{{ p.sid }}</code></td>
                 <td>{{ p.price }} 元</td>
@@ -56,6 +57,9 @@
                 </div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道项目ID (sid)</label><input name="sid" id="p_sid" type="number" class="input-modern" required></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">定价 (元/次) <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(设0则按渠道加价%自动计)</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">分类 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(用于前台筛选分组)</span></label><input name="category" id="p_category" class="input-modern" placeholder="如：社交、金融、购物"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">图标 (emoji或SVG)</label><input name="icon" id="p_icon" class="input-modern" placeholder="📱 或 SVG代码"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">颜色 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(6位hex色)</span></label><input name="color" id="p_color" class="input-modern" placeholder="#f1f5f9" value="#f1f5f9"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">描述</label><input name="description" id="p_desc" class="input-modern"></div>
             </form>
         </div>
@@ -73,6 +77,9 @@ function showAdd() {
     document.getElementById('p_name').value = '';
     document.getElementById('p_sid').value = '';
     document.getElementById('p_price').value = '0';
+    document.getElementById('p_category').value = '';
+    document.getElementById('p_icon').value = '';
+    document.getElementById('p_color').value = '#f1f5f9';
     document.getElementById('p_desc').value = '';
     document.getElementById('projectModal').style.display = 'flex';
 }
@@ -90,6 +97,21 @@ async function submitProject() {
 async function editProject(id) {
     document.getElementById('modalTitle').textContent = '编辑项目';
     document.getElementById('editId').value = id;
+    // 获取当前数据填充
+    const r = await fetch('/admin/projects/'+id+'/json');
+    if (r.ok) {
+        const d = await r.json();
+        if (d.ok) {
+            document.getElementById('p_name').value = d.project.name || '';
+            document.getElementById('p_channel_id').value = d.project.channel_id || '';
+            document.getElementById('p_sid').value = d.project.sid || '';
+            document.getElementById('p_price').value = d.project.price || '0';
+            document.getElementById('p_category').value = d.project.category || '';
+            document.getElementById('p_icon').value = d.project.icon || '';
+            document.getElementById('p_color').value = d.project.color || '#f1f5f9';
+            document.getElementById('p_desc').value = d.project.description || '';
+        }
+    }
     document.getElementById('projectModal').style.display = 'flex';
 }
 async function deleteProject(id) {

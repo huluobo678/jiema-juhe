@@ -79,16 +79,118 @@ def test_channel_login(id):
     db.close()
     if not ch:
         return jsonify({'ok': False, 'msg': '渠道不存在'})
-    hzm = HaoZhuMa(ch['api_url'], ch['api_user'], ch['api_pass'])
+    hzm = HaoZhuMa(ch['id'], ch['name'], {
+        'api_url': ch['api_url'],
+        'api_user': ch['api_user'] or '',
+        'api_pass': ch['api_pass'] or '',
+        'token': ch['token'] or '',
+    })
     data = hzm.login()
-    if data.get('code') == 0:
-        # 缓存token
+    code = data.get('code')
+    if code == 0 or code == '0':
         db2 = get_db()
         db2.execute("UPDATE channels SET token=? WHERE id=?", (data['token'], id))
         db2.commit()
         db2.close()
         return jsonify({'ok': True, 'msg': '登录成功', 'token': data['token']})
     return jsonify({'ok': False, 'msg': '登录失败: ' + data.get('msg', '')})
+
+@admin_bp.route('/channels/<int:id>/edit', methods=['POST'])
+@login_required
+def edit_channel(id):
+    name = request.form['name']
+    api_url = request.form['api_url']
+    api_user = request.form.get('api_user', '')
+    api_pass = request.form.get('api_pass', '')
+    token = request.form.get('token', '')
+    channel_type = request.form.get('channel_type', 'haozhuma')
+    markup_percent = float(request.form.get('markup_percent', 0))
+    db = get_db()
+    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?
+                   WHERE id=?""",
+               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, id))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@admin_bp.route('/channels/<int:id>/json')
+@login_required
+def channel_json(id):
+    db = get_db()
+    ch = db.execute("SELECT * FROM channels WHERE id=?", (id,)).fetchone()
+    db.close()
+    if not ch:
+        return jsonify({'ok': False, 'msg': '渠道不存在'})
+    return jsonify({'ok': True, 'channel': dict(ch)})
+
+@admin_bp.route('/channels/<int:id>/toggle', methods=['POST'])
+@login_required
+def toggle_channel(id):
+    enabled = int(request.form.get('enabled', 1))
+    db = get_db()
+    db.execute("UPDATE channels SET enabled=? WHERE id=?", (enabled, id))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@admin_bp.route('/channels/<int:id>/delete', methods=['POST'])
+@login_required
+def delete_channel(id):
+    db = get_db()
+    db.execute("DELETE FROM channels WHERE id=?", (id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+@admin_bp.route('/channel-balances')
+@login_required
+def channel_balances():
+    """获取所有渠道的上游余额"""
+    from channels import get_registry
+    db = get_db()
+    rows = db.execute("SELECT id, name, api_user, api_pass, token, api_url, channel_type FROM channels WHERE enabled=1").fetchall()
+    db.close()
+    reg = get_registry()
+    result = []
+    for r in rows:
+        ch = reg.get(r['id'])
+        if ch:
+            try:
+                bal = ch.get_balance()
+                result.append({'id': r['id'], 'name': r['name'], 'balance': bal})
+                continue
+            except:
+                pass
+        # 没有活实例，直接构造一次性获取
+        try:
+            from channels.haozhuma import HaoZhuMa
+            hzm = HaoZhuMa(r['id'], r['name'], {
+                'api_url': r['api_url'],
+                'api_user': r['api_user'] or '',
+                'api_pass': r['api_pass'] or '',
+                'token': r['token'] or '',
+            })
+            bal = hzm.get_balance()
+            result.append({'id': r['id'], 'name': r['name'], 'balance': bal})
+        except Exception as e:
+            result.append({'id': r['id'], 'name': r['name'], 'balance': 0})
+    return jsonify({'ok': True, 'balances': result})
+
+@admin_bp.route('/channels/status')
+@login_required
+def channels_status():
+    from channels import get_registry
+    reg = get_registry()
+    chs = reg.get_all()
+    return jsonify({'ok': True, 'channels': [{
+        'id': c.channel_id,
+        'name': c.name,
+        'alive': c.alive,
+        'circuit': 'closed',
+        'concurrent': c.concurrency,
+        'concurrent_limit': c.max_concurrency,
+        'last_ping': '-',
+    } for c in chs]})
 
 # ========== 项目管理 ==========
 
@@ -110,9 +212,9 @@ def projects():
 def add_project():
     db = get_db()
     try:
-        db.execute("INSERT INTO projects (name, channel_id, sid, price, description) VALUES (?,?,?,?,?)",
+        db.execute("INSERT INTO projects (name, channel_id, sid, price, description, category, icon, color) VALUES (?,?,?,?,?,?,?,?)",
                    (request.form['name'], request.form['channel_id'], int(request.form['sid']),
-                    float(request.form['price']), request.form.get('description', '')))
+                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
         db.commit()
     except Exception as e:
         db.close()
@@ -125,10 +227,10 @@ def add_project():
 def edit_project(id):
     db = get_db()
     try:
-        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, price=?, description=?
+        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, price=?, description=?, category=?, icon=?, color=?
                       WHERE id=?""",
                    (request.form['name'], request.form['channel_id'], int(request.form['sid']),
-                    float(request.form['price']), request.form.get('description', ''), id))
+                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
         db.commit()
     except Exception as e:
         db.close()
@@ -144,6 +246,16 @@ def delete_project(id):
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+@admin_bp.route('/projects/<int:id>/json', methods=['GET'])
+@login_required
+def project_json(id):
+    db = get_db()
+    row = db.execute("SELECT * FROM projects WHERE id=?", (id,)).fetchone()
+    db.close()
+    if not row:
+        return jsonify({'ok': False, 'msg': 'Not found'})
+    return jsonify({'ok': True, 'project': dict(row)})
 
 # ========== 卡密管理 ==========
 

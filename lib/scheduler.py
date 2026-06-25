@@ -48,7 +48,7 @@ class SmartScheduler:
             candidates.append((score, ch))
         
         if not candidates:
-            return None, None
+            return None
         
         # 按分数升序（并发最低的优先）
         candidates.sort(key=lambda x: x[0])

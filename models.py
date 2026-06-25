@@ -6,6 +6,10 @@ from config import DATABASE
 def _migrate_upgrade(conn):
     """迁移旧表：添加新列"""
     try:
+        conn.execute("ALTER TABLE channels ADD COLUMN channel_type TEXT DEFAULT 'haozhuma'")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE channels ADD COLUMN markup_percent REAL DEFAULT 0")
     except Exception:
         pass
@@ -35,6 +39,18 @@ def _migrate_upgrade(conn):
         pass
     try:
         conn.execute("ALTER TABLE projects ADD COLUMN base_price_type TEXT DEFAULT 'auto'")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN category TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN icon TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN color TEXT DEFAULT '#f1f5f9'")
     except Exception:
         pass
     conn.commit()

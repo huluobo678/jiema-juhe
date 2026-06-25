@@ -39,10 +39,18 @@
 {% endblock %}
 {% block scripts %}
 <script>
+function refreshBalance() {
+    fetch('/balance').then(r=>r.json()).then(d=>{
+        if (d.ok && d.balance !== undefined) {
+            const el = document.getElementById('topBalance');
+            if (el) el.textContent = '¥' + Number(d.balance).toFixed(2);
+        }
+    });
+}
 async function redeem() {
     const code = document.getElementById('codeInput').value.trim();
     if (!code) return;
-    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'code=*** + encodeURIComponent(code)});
+    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'code=' + encodeURIComponent(code)});
     const d = await r.json();
     const el = document.getElementById('redeemResult');
     el.style.display = 'block';
