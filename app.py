@@ -18,10 +18,15 @@ app.register_blueprint(admin_bp)
 
 @app.route('/__deploy__')
 def deploy_hook():
-    """Trigger git pull on server via HTTP. Password = first 16 chars of SECRET_KEY."""
-    pw = request.args.get('pw', '')
-    if pw != SECRET_KEY[:16]:
-        return 'unauthorized', 403
+    """Trigger git pull on server via HTTP. Password = first 16 chars of SECRET_KEY.
+    Or if admin session exists, skip password."""
+    # 管理员 session 免密
+    if flask_session.get('admin_username'):
+        pass  # skip password check
+    else:
+        pw = request.args.get('pw', '')
+        if pw != SECRET_KEY[:16]:
+            return 'unauthorized', 403
     try:
         r = subprocess.run(['git', 'pull', 'origin', 'master'],
                            capture_output=True, text=True, timeout=60,

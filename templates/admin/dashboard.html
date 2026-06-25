@@ -32,6 +32,18 @@
                 <div class="value" style="color:var(--primary-light)" id="sessionCount">-</div>
             </div>
         </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:32px 0">
+
+        <!-- 一键部署 -->
+        <h3>🚀 从 GitHub 部署</h3>
+        <p style="color:var(--text-muted);margin-bottom:16px">在 GitHub 上改完代码后，点击下面按钮自动拉取到服务器并重启</p>
+        <div style="display:flex;gap:12px;align-items:center">
+            <button onclick="deploy()" style="padding:10px 28px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">部署</button>
+            <span id="deployStatus" style="font-size:0.85rem;color:var(--text-muted)"></span>
+        </div>
+        <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
+
         {% endblock %}
     </div>
 </div>
@@ -49,6 +61,31 @@ async function loadStats() {
         }
     } catch(e) {}
 }
+
+async function deploy() {
+    const btn = document.querySelector('button[onclick="deploy()"]');
+    const status = document.getElementById('deployStatus');
+    const output = document.getElementById('deployOutput');
+    btn.disabled = true;
+    btn.textContent = '部署中...';
+    status.textContent = '⏳ 正在拉取最新代码...';
+    output.style.display = 'block';
+    try {
+        const r = await fetch('/__deploy__');
+        const text = await r.text();
+        output.textContent = text;
+        status.textContent = '✅ 部署完成！正在重启...';
+        await fetch('/__restart__');
+    } catch(e) {
+        status.textContent = '❌ ' + e;
+    }
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = '部署';
+        status.textContent = '✅ 请刷新页面确认效果'; 
+    }, 5000);
+}
+
 loadStats();
 </script>
 </body>
