@@ -1,0 +1,44 @@
+{% extends "user/layout.html" %}
+{% set page_title = "云枢速联 - 使用记录" %}
+{% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>📋 使用记录</h2>
+    <p>最近50条接码记录</p>
+</div>
+<div style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+    <table style="width:100%;border-collapse:collapse">
+        <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">项目</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">手机号</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">验证码</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">时间</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">状态</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sessions %}
+            <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:10px 16px;font-size:0.9rem;color:#0f172a;font-weight:500">{{ s.project_name }}</td>
+                <td style="padding:10px 16px;font-size:0.85rem;color:#475569;font-family:'Courier New',monospace">{{ s.phone }}</td>
+                <td style="padding:10px 16px;font-size:0.9rem;color:#059669;font-weight:700;letter-spacing:2px">{{ s.code or '-' }}</td>
+                <td style="padding:10px 16px;font-size:0.8rem;color:#64748b">{{ s.created_at }}</td>
+                <td style="padding:10px 16px">
+                    {% if s.status == 'received' %}
+                    <span style="background:#f0fdf4;color:#059669;padding:2px 10px;border-radius:12px;font-size:0.8rem;font-weight:600">已收到</span>
+                    {% elif s.status == 'waiting' %}
+                    <span style="background:#fefce8;color:#ca8a04;padding:2px 10px;border-radius:12px;font-size:0.8rem;font-weight:600">等待中</span>
+                    {% else %}
+                    <span style="background:#f1f5f9;color:#64748b;padding:2px 10px;border-radius:12px;font-size:0.8rem;font-weight:600">已释放</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        {% if not sessions %}
+            <tr><td colspan="5" style="padding:40px;text-align:center;color:#94a3b8">暂无使用记录</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

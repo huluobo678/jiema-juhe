@@ -263,3 +263,27 @@ def register():
         return jsonify({'ok': True, 'msg': '邮箱绑定成功'})
 
     return render_template('user/register.html')
+
+@user_bp.route('/logout')
+def logout():
+    """用户退出 - 清除cookie"""
+    resp = __import__('flask').redirect('/')
+    resp.set_cookie('account_token', '', expires=0)
+    return resp
+
+@user_bp.route('/history')
+def user_history():
+    """用户使用记录"""
+    account_token = request.cookies.get('account_token')
+    sessions = []
+    if account_token:
+        db = get_db()
+        sessions = db.execute("""
+            SELECT s.*, p.name as project_name
+            FROM sms_sessions s
+            JOIN projects p ON s.project_id=p.id
+            WHERE s.account_token=?
+            ORDER BY s.id DESC LIMIT 50
+        """, (account_token,)).fetchall()
+        db.close()
+    return render_template('user/history.html', sessions=sessions)

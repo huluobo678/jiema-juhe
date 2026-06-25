@@ -3,14 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>接码平台</title>
+    <title>{{ page_title|default('云枢速联') }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* 用户前台侧边栏特定样式 */
+        .user-layout { display: flex; min-height: 100vh; }
+        .user-sidebar {
+            width: 230px; flex-shrink: 0;
+            background: #fff;
+            border-right: 1px solid #e2e8f0;
+            display: flex; flex-direction: column;
+            position: sticky; top: 0; height: 100vh; overflow-y: auto;
+        }
+        .user-sidebar .sidebar-logo {
+            padding: 22px 20px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 1.1rem; font-weight: 700; color: #0f172a;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .user-sidebar .sidebar-logo svg { width: 22px; height: 22px; flex-shrink: 0; }
+        .user-sidebar .sidebar-logo span { background: linear-gradient(135deg, #0f172a, #334155); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .user-nav { padding: 8px 0; flex: 1; }
+        .user-nav a, .user-nav .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 20px; color: #475569; font-size: 0.9rem;
+            text-decoration: none; transition: all 0.15s; cursor: pointer; position: relative;
+        }
+        .user-nav a:hover { background: #f1f5f9; color: #1e293b; }
+        .user-nav a.active, .user-nav .nav-item.active {
+            background: #ecfdf5; color: #059669;
+        }
+        .user-nav a.active svg, .user-nav .nav-item.active svg { color: #059669; }
+        .user-nav a svg, .user-nav .nav-item svg {
+            width: 18px; height: 18px; flex-shrink: 0; color: #94a3b8; transition: color 0.15s;
+        }
+        .user-nav a.active svg, .user-nav .nav-item.active svg { color: #059669; }
+        .user-nav a .badge, .user-nav .nav-item .badge {
+            margin-left: auto; background: #ef4444; color: #fff;
+            font-size: 0.7rem; padding: 1px 7px; border-radius: 10px; font-weight: 600;
+        }
+        /* 子菜单 */
+        .sub-nav { display: none; padding: 0; }
+        .sub-nav.open { display: block; }
+        .sub-nav a {
+            padding-left: 50px !important; font-size: 0.85rem !important;
+        }
+        /* 下拉箭头 */
+        .nav-arrow {
+            margin-left: auto; font-size: 0.65rem; color: #94a3b8; transition: transform 0.2s;
+        }
+        .nav-arrow.open { transform: rotate(180deg); }
+        /* 用户信息栏 */
+        .user-sidebar .sidebar-footer {
+            padding: 16px 20px; border-top: 1px solid #f1f5f9;
+        }
+        .user-sidebar .sidebar-footer .balance-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 6px; font-size: 0.85rem; color: #64748b;
+        }
+        .user-sidebar .sidebar-footer .balance-row .amount {
+            font-weight: 700; color: #059669; font-size: 1rem;
+        }
+        .user-sidebar .sidebar-footer .user-actions {
+            display: flex; gap: 6px; margin-top: 10px;
+        }
+        .user-sidebar .sidebar-footer .user-actions a {
+            flex: 1; text-align: center; padding: 6px 0;
+            border-radius: 6px; font-size: 0.8rem; color: #64748b;
+            border: 1px solid #e2e8f0; text-decoration: none; transition: all 0.15s;
+        }
+        .user-sidebar .sidebar-footer .user-actions a:hover {
+            background: #f1f5f9; color: #1e293b;
+        }
+        /* 用户内容区 */
+        .user-content {
+            flex: 1; background: #f8fafc; padding: 28px 32px; min-height: 100vh; max-width: 1100px;
+        }
+        .user-content .page-header {
+            margin-bottom: 24px;
+        }
+        .user-content .page-header h2 {
+            font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 0 0 4px;
+        }
+        .user-content .page-header p {
+            font-size: 0.85rem; color: #94a3b8; margin: 0;
+        }
+        /* 移动端响应式 */
+        @media (max-width: 768px) {
+            .user-layout { flex-direction: column; }
+            .user-sidebar { width: 100%; height: auto; position: static; }
+            .user-nav { display: none; }
+            .user-nav.mobile-open { display: block; }
+            .user-content { padding: 20px 16px; }
+            .hamburger { display: flex !important; }
+        }
+        .hamburger {
+            display: none; align-items: center; justify-content: center;
+            width: 36px; height: 36px; cursor: pointer; border-radius: 8px;
+            border: 1px solid #e2e8f0; background: #fff;
+        }
+        .user-sidebar .sidebar-top {
+            display: flex; align-items: center; justify-content: space-between; padding: 12px 20px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        @media (min-width: 769px) {
+            .user-sidebar .sidebar-top { display: none; }
+        }
+    </style>
 </head>
 <body>
-<div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);min-height:100vh;padding:20px">
-    <div style="max-width:800px;width:100%;margin:0 auto">
+<div class="user-layout">
+    <!-- 侧边栏 -->
+    <div class="user-sidebar">
+        <div class="sidebar-top">
+            <div class="sidebar-logo" style="border:none;padding:0">
+                <span>云枢速联</span>
+            </div>
+            <div class="hamburger" onclick="toggleMobileNav()">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </div>
+        </div>
+        <div class="sidebar-logo" style="border-bottom:1px solid #f1f5f9">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>云枢速联</span>
+        </div>
+        <div class="user-nav" id="mainNav">
+            <!-- 菜单由各页面注入的 nav_items 常量渲染，但保留静态备份以备JS直出 -->
+            {% block sidebar %}{% endblock %}
+        </div>
+        <div class="sidebar-footer">
+            <div class="balance-row">
+                <span>余额</span>
+                <span class="amount" id="sideBalance">¥{{ balance|default(0) }}</span>
+            </div>
+            <div class="user-actions">
+                <a href="/register">📧 绑定</a>
+                <a href="https://qian.s888w.com" target="_blank">🌍 批发</a>
+                <a href="/logout">🚪 退出</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="user-content">
         {% block content %}{% endblock %}
     </div>
 </div>
+
+<script>
+function toggleMobileNav() {
+    document.getElementById('mainNav').classList.toggle('mobile-open');
+}
+// 子菜单切换
+function toggleSub(btn) {
+    var sub = btn.nextElementSibling;
+    var arrow = btn.querySelector('.nav-arrow');
+    if (sub) {
+        sub.classList.toggle('open');
+        if (arrow) arrow.classList.toggle('open');
+    }
+}
+// 余额更新
+function refreshBalance() {
+    fetch('/balance').then(r=>r.json()).then(d=>{
+        if(d.ok) {
+            document.getElementById('sideBalance').textContent = '¥' + d.balance;
+        }
+    });
+}
+// 高亮当前菜单
+document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.user-nav a').forEach(function(a) {
+        var href = a.getAttribute('href');
+        if (href && (path === href || path.startsWith(href + '/') || (path === '/' && href === '/'))) {
+            a.classList.add('active');
+            // 如果是子菜单，展开父级
+            var parent = a.closest('.sub-nav');
+            if (parent) {
+                parent.classList.add('open');
+                var prev = parent.previousElementSibling;
+                if (prev && prev.querySelector('.nav-arrow')) {
+                    prev.querySelector('.nav-arrow').classList.add('open');
+                }
+            }
+        }
+    });
+});
+</script>
 </body>
 </html>

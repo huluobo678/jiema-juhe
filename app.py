@@ -39,9 +39,19 @@ def restart_app():
 
 @app.context_processor
 def inject_globals():
-    return {
-        'session_username': flask_session.get('admin_username', '')
+    ctx = {
+        'session_username': flask_session.get('admin_username', ''),
+        'balance': 0
     }
+    token = request.cookies.get('account_token')
+    if token:
+        from models import get_db
+        db = get_db()
+        acc = db.execute("SELECT balance FROM accounts WHERE token=?", (token,)).fetchone()
+        if acc:
+            ctx['balance'] = acc['balance']
+        db.close()
+    return ctx
 
 if __name__ == '__main__':
     init_db()
