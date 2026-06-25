@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -25,6 +25,10 @@
             <div class="stat-card" style="border-left:4px solid var(--warning)">
                 <div class="label">卡密总数</div>
                 <div class="value" style="color:var(--warning)" id="cardCount">-</div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid var(--danger)">
+                <div class="label">用户总数</div>
+                <div class="value" style="color:var(--danger)" id="userCount">-</div>
             </div>
             <div class="stat-card" style="border-left:4px solid var(--primary-light)">
                 <div class="label">收码次数</div>
@@ -82,6 +86,8 @@ async function loadStats() {
             document.getElementById('projectCount').textContent = d.projectCount;
             document.getElementById('cardCount').textContent = d.cardCount;
             document.getElementById('sessionCount').textContent = d.sessionCount;
+            document.getElementById('userCount').textContent = d.userCount;
+            document.getElementById('userCount').textContent = d.userCount;
         }
     } catch(e) {}
 }

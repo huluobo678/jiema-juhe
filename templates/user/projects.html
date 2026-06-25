@@ -1,23 +1,461 @@
-{% extends "user/layout.html" %}
+﻿{% extends "user/layout.html" %}
 {% set page_title = "云枢速联 - 项目管理" %}
 {% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+
 {% block content %}
+<style>
+/* 项目卡片 */
+.project-filter-bar {
+  display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.project-filter-tag {
+  padding: 6px 16px; border-radius: 20px; font-size: 0.8rem;
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.project-filter-tag:hover { border-color: #059669; color: #059669; }
+.project-filter-tag.active { background: #059669; color: #fff; border-color: #059669; }
+
+.s2-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.s2-project {
+  background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; padding: 18px;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; flex-direction: column; gap: 10px;
+  position: relative;
+}
+.s2-project:hover {
+  border-color: #059669;
+  box-shadow: 0 4px 16px rgba(5,150,105,0.15);
+  transform: translateY(-2px);
+}
+.s2-project .pj-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+.s2-project .pj-name { font-weight: 600; color: #1e293b; font-size: 0.95rem; }
+.s2-project .pj-meta { font-size: 0.75rem; color: #94a3b8; }
+.s2-project .pj-bottom { display: flex; justify-content: space-between; align-items: center; }
+.s2-price-pill {
+  background: linear-gradient(135deg,#059669,#10b981); color: white;
+  padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
+}
+.s2-project.disabled { opacity: 0.45; cursor: not-allowed; }
+.s2-project.disabled:hover { border-color: #e2e8f0; transform: none; box-shadow: none; }
+.project-empty {
+  grid-column: 1 / -1;
+  color: #94a3b8; text-align: center; padding: 40px 0;
+}
+
+/* 当前收码面板 */
+#currentSession {
+  display: none;
+  border: 2px solid #059669;
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  animation: slideIn 0.35s ease;
+}
+@keyframes slideIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+.cs-project { font-size: 0.8rem; color: #059669; font-weight: 600; margin-bottom: 2px; }
+.cs-phone-box { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.cs-phone { font-size: 2rem; font-weight: 800; color: #0f172a; font-family: 'Courier New',monospace; letter-spacing: 3px; }
+.cs-status { font-size: 0.85rem; color: #64748b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cs-timer { color: #dc2626; font-weight: 600; }
+.cs-actions { margin-top: 12px; display: flex; gap: 10px; }
+.cs-btn-sm { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: none; transition: all 0.15s; }
+.cs-btn-release { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.cs-btn-release:hover { background: #fee2e2; }
+.cs-btn-copy { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.cs-btn-copy:hover { background: #e2e8f0; }
+
+#csCodeSection { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bbf7d0; }
+.cs-code-value {
+  font-size: 3rem; font-weight: 900; color: #059669;
+  letter-spacing: 10px; font-family: 'Courier New',monospace;
+  animation: codePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes codePop {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.cs-code-section-title {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; color: #059669; margin-bottom: 8px;
+}
+.cs-code-section-title .badge {
+  background: #059669; color: #fff; font-size: 0.65rem;
+  padding: 2px 8px; border-radius: 10px;
+  animation: badgePulse 1.5s ease infinite;
+}
+@keyframes badgePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+.cs-sms-body {
+  background: #fff; border-radius: 8px; padding: 10px 14px;
+  margin-top: 10px; color: #475569; font-size: 0.85rem;
+  border: 1px solid #bbf7d0; line-height: 1.5;
+}
+.cs-spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid #e2e8f0; border-top-color: #059669;
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg) } }
+
+/* Toast */
+.s2-toast {
+  position: fixed; top: 20px; right: 20px; z-index: 9999;
+  padding: 14px 24px; border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  font-weight: 600; font-size: 0.95rem;
+  display: flex; align-items: center; gap: 10px;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+  max-width: 380px;
+}
+@keyframes toastIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
+.s2-toast.success { background: #059669; color: #fff; }
+.s2-toast.error { background: #dc2626; color: #fff; }
+.s2-toast.info { background: #2563eb; color: #fff; }
+
+/* 通用卡片 */
+.s2-card {
+  background: #fff; border-radius: 16px; padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+.s2-card h3 {
+  font-size: 1rem; font-weight: 600; color: #0f172a; margin: 0 0 16px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.s2-history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+}
+.s2-history-item:last-child { border-bottom: none; }
+.s2-history-item .h-left { font-size: 0.85rem; color: #475569; }
+.s2-history-item .h-left .h-phone { font-weight: 600; color: #0f172a; }
+.s2-history-item .h-left .h-time { font-size: 0.75rem; color: #94a3b8; margin-left: 6px; }
+.s2-history-item .h-code { font-weight: 800; font-size: 1.1rem; color: #059669; font-family: 'Courier New',monospace; letter-spacing: 3px; }
+.s2-history-empty { color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 20px 0; }
+</style>
+
+<div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;"></div>
+
 <div class="page-header">
     <h2>📋 项目管理</h2>
-    <p>浏览可用的接码项目与价格</p>
+    <p>选择项目 → 获取验证码</p>
 </div>
-<div style="background:#fff;border-radius:12px;padding:20px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-    {% for p in projects %}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #f1f5f9">
-        <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:1.2rem">📦</span>
+
+<!-- ===== 当前收码面板（内嵌，不消失） ===== -->
+<div id="currentSession">
+  <div class="cs-project" id="csProjectName">项目</div>
+  <div class="cs-phone-box">
+    <span class="cs-phone" id="csPhone">---</span>
+    <span class="cs-status" style="font-size:0.75rem;color:#94a3b8" id="csElapsed">0秒前</span>
+  </div>
+  <div class="cs-status">
+    状态: <span id="csStateLabel">⏳ 等待验证码</span>
+    <span class="cs-timer" id="csTimer">⏱ 200秒</span>
+  </div>
+  <div id="csCodeSection">
+    <div class="cs-code-section-title">🎉 验证码已成功获取 <span class="badge">NEW</span></div>
+    <div class="cs-code-value" id="csCodeDisplay">---</div>
+    <div class="cs-sms-body" id="csSmsContent"></div>
+  </div>
+  <div class="cs-actions">
+    <button class="cs-btn-sm cs-btn-release" id="csReleaseBtn" onclick="releasePhone()">释放号码</button>
+    <button class="cs-btn-sm cs-btn-copy" onclick="copyPhone()">📋 复制号码</button>
+  </div>
+</div>
+
+<!-- ===== 项目网格 ===== -->
+<div class="s2-card">
+    <h3>📋 接码项目 <span style="font-weight:400;font-size:0.8rem;color:#94a3b8">({{ projects|length }} 个)</span></h3>
+    <div class="project-filter-bar" id="filterBar">
+        <span class="project-filter-tag active" onclick="filterProjects('all', this)">全部</span>
+        {% set tags = [] %}
+        {% for p in projects %}
+          {% if p.category and p.category not in tags %}{% set _ = tags.append(p.category) %}{% endif %}
+        {% endfor %}
+        {% for tag in tags %}
+          <span class="project-filter-tag" onclick="filterProjects('{{ tag|e }}', this)">{{ tag }}</span>
+        {% endfor %}
+    </div>
+    <div class="s2-project-grid" id="projectGrid">
+        {% for p in projects %}
+        <div class="s2-project" data-pid="{{ p.id }}" data-pname="{{ p.name|e }}" data-category="{{ p.category|e if p.category else '' }}"
+             onclick="startOrder({{ p.id }}, '{{ p.name|e }}')">
+            <div class="pj-icon" style="background:{{ p.color or '#f1f5f9' }}">
+              {% if p.icon %}{{ p.icon|safe }}{% else %}📦{% endif %}
+            </div>
             <div>
-                <div style="font-weight:600;color:#0f172a">{{ p.name }}</div>
+              <div class="pj-name">{{ p.name }}</div>
+              <div class="pj-meta">{{ p.category if p.category else '通用' }}</div>
+            </div>
+            <div class="pj-bottom">
+              <span class="s2-price-pill">{{ p.price }} 元</span>
             </div>
         </div>
-        <div style="background:#f0fdf4;color:#059669;padding:4px 14px;border-radius:20px;font-weight:700;font-size:0.9rem">{{ p.price }} 元</div>
+        {% endfor %}
+        {% if not projects %}
+        <div class="project-empty">暂无可用项目</div>
+        {% endif %}
     </div>
-    {% endfor %}
-    {% if not projects %}<div style="text-align:center;padding:40px;color:#94a3b8">暂无可用项目</div>{% endif %}
 </div>
+
+<!-- 最近收码 -->
+<div class="s2-card">
+  <h3>📜 最近收码</h3>
+  <div id="recentHistory">
+    <div class="s2-history-empty">暂无记录</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ============ 状态管理 ============
+let currentVT = null, polling = false, secondsLeft = 200, countdownTimer = null;
+let csStartTime = null, csTimer2 = null;
+
+// ============ 提示音 ============
+let audioCtx = null;
+function playBeep() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine'; osc.frequency.value = 1200;
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.4);
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2); gain2.connect(audioCtx.destination);
+        osc2.type = 'sine'; osc2.frequency.value = 1600;
+        gain2.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.4);
+        gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+        osc2.start(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.8);
+    } catch(e) {}
+}
+
+// ============ Toast ============
+function showToast(msg, type) {
+    type = type || 'success';
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 's2-toast ' + type;
+    t.innerHTML = msg;
+    c.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 4000);
+}
+
+// ============ 项目筛选 ============
+function filterProjects(category, el) {
+    document.querySelectorAll('#filterBar .project-filter-tag').forEach(function(t){ t.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    var cards = document.querySelectorAll('#projectGrid .s2-project');
+    cards.forEach(function(c){
+        var cat = c.getAttribute('data-category') || '';
+        c.style.display = (category === 'all' || cat === category) ? '' : 'none';
+    });
+}
+
+// ============ 余额 / 今日 / 最近 ============
+async function loadToday() {
+    try { var r = await fetch('/today-count'); var d = await r.json();
+        var el = document.querySelector('#todayCount'); if (el) el.textContent = d.count || 0;
+    } catch(e) {}
+}
+async function loadRecent() {
+    try {
+        var r = await fetch('/recent-sms'); var d = await r.json();
+        var box = document.getElementById('recentHistory');
+        if (d.ok && d.list && d.list.length > 0) {
+            box.innerHTML = d.list.map(function(s){
+                return '<div class="s2-history-item"><div class="h-left"><span class="h-phone">'+(s.phone||'-')+'</span><span class="h-time">'+(s.project_name||'')+'</span></div><div class="h-code">'+(s.code||'-')+'</div></div>';
+            }).join('');
+        }
+    } catch(e) {}
+}
+
+// ============ 开始取号 ============
+async function startOrder(pid, pname) {
+    try {
+        var r = await fetch('/start-order', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project_id:pid})});
+        var d = await r.json();
+        if (!d.ok) { showToast('❌ '+d.msg, 'error'); return; }
+        // 显示收码面板
+        currentVT = d.view_token;
+        document.getElementById('csProjectName').textContent = pname;
+        document.getElementById('csPhone').textContent = d.phone;
+        document.getElementById('csCodeSection').style.display = 'none';
+        document.getElementById('csStateLabel').textContent = '⏳ 等待验证码中...';
+        document.getElementById('csStateLabel').style.color = '';
+        document.getElementById('currentSession').style.display = 'block';
+        csStartTime = Date.now();
+        secondsLeft = 200;
+        // 保存到localStorage
+        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, startedAt:Date.now()}));
+        // 开始倒计时
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(updateTimer, 1000);
+        document.getElementById('csTimer').textContent = '⏱ 200秒';
+        // 禁用项目卡片
+        document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.add('disabled'); });
+        // 开始轮询
+        if (polling) return;
+        polling = true;
+        pollSms();
+    } catch(e) {
+        showToast('❌ 请求失败', 'error');
+    }
+}
+
+// ============ 轮询验证码 ============
+async function pollSms() {
+    while (polling && currentVT) {
+        try {
+            var r = await fetch('/api/sms/'+currentVT);
+            var d = await r.json();
+            if (d.ok) {
+                if (d.code) {
+                    // 收到验证码
+                    document.getElementById('csStateLabel').textContent = '✅ 已收到验证码';
+                    document.getElementById('csStateLabel').style.color = '#059669';
+                    document.getElementById('csCodeDisplay').textContent = d.code;
+                    document.getElementById('csSmsContent').textContent = d.sms || '';
+                    document.getElementById('csCodeSection').style.display = 'block';
+                    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                    polling = false;
+                    playBeep();
+                    showToast('✅ 验证码: '+d.code+' 已成功获取！', 'success');
+                    localStorage.removeItem('sms_current_vt');
+                    // 重新启用项目卡片
+                    document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.remove('disabled'); });
+                    loadRecent(); loadToday();
+                    return;
+                }
+            } else if (d.waiting) {
+                // 还在等
+                if (csStartTime) {
+                    var secs = Math.floor((Date.now() - csStartTime) / 1000);
+                    document.getElementById('csElapsed').textContent = secs + '秒前';
+                }
+            } else {
+                // 错误
+                document.getElementById('csStateLabel').textContent = '❌ '+d.msg;
+                polling = false;
+                showToast('❌ '+d.msg, 'error');
+                return;
+            }
+        } catch(e) {}
+        await new Promise(function(r){ setTimeout(r, 2000); });
+    }
+    polling = false;
+}
+
+// ============ 倒计时 ============
+function updateTimer() {
+    document.getElementById('csTimer').textContent = '⏱ ' + secondsLeft + '秒';
+    if (csStartTime) {
+        var secs = Math.floor((Date.now() - csStartTime) / 1000);
+        document.getElementById('csElapsed').textContent = secs + '秒前';
+    }
+    if (secondsLeft <= 0) {
+        clearInterval(countdownTimer); countdownTimer = null;
+        document.getElementById('csStateLabel').textContent = '⏰ 已超时';
+        autoRelease();
+        return;
+    }
+    secondsLeft--;
+}
+
+// ============ 自动释放 ============
+async function autoRelease() {
+    if (!currentVT) return;
+    showToast('⏰ 超时自动释放号码', 'info');
+    try {
+        var r = await fetch('/release-phone', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({view_token:currentVT})});
+        var d = await r.json();
+        if (d.ok) cleanupSession();
+    } catch(e) { cleanupSession(); }
+}
+
+// ============ 手动释放 ============
+async function releasePhone() {
+    if (!currentVT) return;
+    if (!confirm('确定释放该号码？')) return;
+    try {
+        var r = await fetch('/release-phone', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({view_token:currentVT})});
+        var d = await r.json();
+        if (d.ok) { showToast('✅ 号码已释放', 'success'); cleanupSession(); }
+    } catch(e) {}
+}
+
+function cleanupSession() {
+    polling = false; currentVT = null;
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    document.getElementById('currentSession').style.display = 'none';
+    localStorage.removeItem('sms_current_vt');
+    document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.remove('disabled'); });
+}
+
+function copyPhone() {
+    var phone = document.getElementById('csPhone').textContent;
+    navigator.clipboard.writeText(phone).then(function(){ showToast('📋 已复制: '+phone, 'info'); }).catch(function(){});
+}
+
+// ============ localStorage 恢复 ============
+(function(){
+    try {
+        var saved = localStorage.getItem('sms_current_vt');
+        if (saved) {
+            var data = JSON.parse(saved);
+            currentVT = data.view_token;
+            var elapsed = Math.floor((Date.now() - data.startedAt) / 1000);
+            if (elapsed < 210) {
+                document.getElementById('csProjectName').textContent = data.project_name || '项目';
+                document.getElementById('csPhone').textContent = data.phone || '---';
+                document.getElementById('currentSession').style.display = 'block';
+                document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.add('disabled'); });
+                csStartTime = data.startedAt;
+                secondsLeft = 210 - elapsed;
+                if (countdownTimer) clearInterval(countdownTimer);
+                countdownTimer = setInterval(updateTimer, 1000);
+                document.getElementById('csTimer').textContent = '⏱ ' + secondsLeft + '秒';
+                // 先检查是否已经收到码
+                fetch('/api/sms/'+currentVT).then(function(r){ return r.json(); }).then(function(d){
+                    if (d.ok && d.code) {
+                        document.getElementById('csStateLabel').textContent = '✅ 已收到验证码';
+                        document.getElementById('csStateLabel').style.color = '#059669';
+                        document.getElementById('csCodeDisplay').textContent = d.code;
+                        document.getElementById('csSmsContent').textContent = d.sms || '';
+                        document.getElementById('csCodeSection').style.display = 'block';
+                        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                        polling = false;
+                        localStorage.removeItem('sms_current_vt');
+                        playBeep();
+                    } else if (d.waiting !== false) {
+                        polling = true; pollSms();
+                    }
+                }).catch(function(){});
+            } else {
+                localStorage.removeItem('sms_current_vt');
+            }
+        }
+    } catch(e) {}
+})();
+
+// ============ 初始化 ============
+loadToday();
+loadRecent();
+</script>
 {% endblock %}

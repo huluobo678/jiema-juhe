@@ -14,6 +14,14 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE channels ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE channels ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE accounts ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
     except Exception:
         pass
@@ -81,6 +89,7 @@ def init_db():
             token TEXT,                          -- 缓存的token
             enabled INTEGER DEFAULT 1,
             markup_percent REAL DEFAULT 0,       -- 加价百分比
+            concurrent_limit INTEGER DEFAULT 5, -- 并发上限
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 

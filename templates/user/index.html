@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-/* ========== 统计卡 ========== */
 .s2-stat-grid {
   display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 24px;
 }
@@ -23,8 +22,6 @@
 .s2-stat-body .label { font-size: 0.75rem; color: #64748b; margin-bottom: 2px; }
 .s2-stat-body .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; line-height: 1.2; }
 .s2-stat-body .sub { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
-
-/* ========== 通用卡片 ========== */
 .s2-card {
   background: #fff; border-radius: 16px; padding: 24px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
@@ -35,150 +32,23 @@
   display: flex; align-items: center; gap: 8px;
 }
 
-/* ========== 项目网格卡片 (sub2api 风格) ========== */
-.project-filter-bar {
-  display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+/* 公告 */
+.ann-item {
+  padding: 12px 0; border-bottom: 1px solid #f1f5f9;
 }
-.project-filter-tag {
-  padding: 6px 16px; border-radius: 20px; font-size: 0.8rem;
-  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-  cursor: pointer; transition: all 0.15s; user-select: none;
+.ann-item:last-child { border-bottom: none; }
+.ann-item .ann-title { font-weight: 600; color: #1e293b; }
+.ann-item .ann-meta { font-size: 0.75rem; color: #94a3b8; }
+.ann-item .ann-important {
+  display: inline-block; background: #fef2f2; color: #dc2626;
+  font-size: 0.7rem; padding: 2px 8px; border-radius: 8px; margin-left: 6px;
 }
-.project-filter-tag:hover { border-color: #059669; color: #059669; }
-.project-filter-tag.active { background: #059669; color: #fff; border-color: #059669; }
-
-.s2-project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-.s2-project {
-  background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; padding: 18px;
-  cursor: pointer; transition: all 0.2s;
-  display: flex; flex-direction: column; gap: 10px;
-  position: relative;
-}
-.s2-project:hover {
-  border-color: #059669;
-  box-shadow: 0 4px 16px rgba(5,150,105,0.15);
-  transform: translateY(-2px);
-}
-.s2-project .pj-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem;
-}
-.s2-project .pj-name { font-weight: 600; color: #1e293b; font-size: 0.95rem; }
-.s2-project .pj-meta { font-size: 0.75rem; color: #94a3b8; }
-.s2-project .pj-bottom { display: flex; justify-content: space-between; align-items: center; }
-.s2-price-pill {
-  background: linear-gradient(135deg,#059669,#10b981); color: white;
-  padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
-}
-
-.s2-project.disabled { opacity: 0.45; cursor: not-allowed; }
-.s2-project.disabled:hover { border-color: #e2e8f0; transform: none; box-shadow: none; }
-
-.project-empty {
-  grid-column: 1 / -1;
-  color: #94a3b8; text-align: center; padding: 40px 0;
-}
-
-/* ========== 当前收码面板 ========== */
-#currentSession {
-  display: none;
-  border: 2px solid #059669;
-  border-radius: 16px;
-  padding: 20px 24px;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-  animation: slideIn 0.35s ease;
-}
-@keyframes slideIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
-.cs-project { font-size: 0.8rem; color: #059669; font-weight: 600; margin-bottom: 2px; }
-.cs-phone-box { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
-.cs-phone { font-size: 2rem; font-weight: 800; color: #0f172a; font-family: 'Courier New',monospace; letter-spacing: 3px; }
-.cs-status { font-size: 0.85rem; color: #64748b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cs-timer { color: #dc2626; font-weight: 600; }
-.cs-actions { margin-top: 12px; display: flex; gap: 10px; }
-.cs-btn-sm { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; border: none; transition: all 0.15s; }
-.cs-btn-release { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.cs-btn-release:hover { background: #fee2e2; }
-.cs-btn-copy { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-.cs-btn-copy:hover { background: #e2e8f0; }
-
-/* 验证码收到区域 */
-#csCodeSection { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bbf7d0; }
-.cs-code-value {
-  font-size: 3rem; font-weight: 900; color: #059669;
-  letter-spacing: 10px; font-family: 'Courier New',monospace;
-  animation: codePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes codePop {
-  0% { transform: scale(0.3); opacity: 0; }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.cs-code-section-title {
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 600; color: #059669; margin-bottom: 8px;
-}
-.cs-code-section-title .badge {
-  background: #059669; color: #fff; font-size: 0.65rem;
-  padding: 2px 8px; border-radius: 10px;
-  animation: badgePulse 1.5s ease infinite;
-}
-@keyframes badgePulse {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-.cs-sms-body {
-  background: #fff; border-radius: 8px; padding: 10px 14px;
-  margin-top: 10px; color: #475569; font-size: 0.85rem;
-  border: 1px solid #bbf7d0; line-height: 1.5;
-}
-.cs-spinner {
-  display: inline-block; width: 18px; height: 18px;
-  border: 2px solid #e2e8f0; border-top-color: #059669;
-  border-radius: 50%; animation: spin 1s linear infinite;
-}
-@keyframes spin { to { transform:rotate(360deg) } }
-
-/* ========== Toast 通知 ========== */
-.s2-toast {
-  position: fixed; top: 20px; right: 20px; z-index: 9999;
-  padding: 14px 24px; border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  font-weight: 600; font-size: 0.95rem;
-  display: flex; align-items: center; gap: 10px;
-  animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
-  max-width: 380px;
-}
-@keyframes toastIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
-@keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
-.s2-toast.success { background: #059669; color: #fff; }
-.s2-toast.error { background: #dc2626; color: #fff; }
-.s2-toast.info { background: #2563eb; color: #fff; }
-
-/* ========== 最近收码 ========== */
-.s2-history-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 0; border-bottom: 1px solid #f1f5f9;
-}
-.s2-history-item:last-child { border-bottom: none; }
-.s2-history-item .h-left { font-size: 0.85rem; color: #475569; }
-.s2-history-item .h-left .h-phone { font-weight: 600; color: #0f172a; }
-.s2-history-item .h-left .h-time { font-size: 0.75rem; color: #94a3b8; margin-left: 6px; }
-.s2-history-item .h-code { font-weight: 800; font-size: 1.1rem; color: #059669; font-family: 'Courier New',monospace; letter-spacing: 3px; }
-.s2-history-empty { color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 20px 0; }
+.ann-item .ann-content { color: #475569; font-size: 0.85rem; margin-top: 4px; }
 </style>
 
-<!-- ========== Toast 容器 ========== -->
-<div id="toastContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;"></div>
-
 <div class="page-header">
-    <h2>📱 仪表盘</h2>
-    <p>选择项目 → 接收验证码</p>
+    <h2>📊 仪表盘</h2>
+    <p>账号概览与平台动态</p>
 </div>
 
 <!-- 统计卡 -->
@@ -200,7 +70,7 @@
         <div class="s2-stat-body">
             <div class="label">可用项目</div>
             <div class="value">{{ projects|length }}</div>
-            <div class="sub">点击开始收码</div>
+            <div class="sub">点击项目开始收码</div>
         </div>
     </div>
     <div class="s2-stat-card">
@@ -225,169 +95,26 @@
     </div>
 </div>
 
-<!-- ============ 当前收码面板 ============ -->
-<div id="currentSession">
-  <div class="cs-project" id="csProjectName">项目</div>
-  <div class="cs-phone-box">
-    <span class="cs-phone" id="csPhone">---</span>
-    <span class="cs-status" style="font-size:0.75rem;color:#94a3b8" id="csElapsed">0秒前</span>
-  </div>
-  <div class="cs-status">
-    状态: <span id="csStateLabel">⏳ 等待验证码</span>
-    <span class="cs-timer" id="csTimer">⏱ 200秒</span>
-  </div>
-
-  <div id="csCodeSection">
-    <div class="cs-code-section-title">
-      🎉 验证码已成功获取 <span class="badge">NEW</span>
-    </div>
-    <div class="cs-code-value" id="csCodeDisplay">---</div>
-    <div class="cs-sms-body" id="csSmsContent"></div>
-  </div>
-
-  <div class="cs-actions">
-    <button class="cs-btn-sm cs-btn-release" id="csReleaseBtn" onclick="releasePhone()">释放号码</button>
-    <button class="cs-btn-sm cs-btn-copy" onclick="copyPhone()">📋 复制号码</button>
-  </div>
-</div>
-
-<!-- ============ 项目网格 ============ -->
+<!-- 最近公告 -->
 <div class="s2-card">
-    <h3>📋 选择项目 <span style="font-weight:400;font-size:0.8rem;color:#94a3b8">({{ projects|length }} 个)</span></h3>
-
-    <!-- 分类筛选 -->
-    <div class="project-filter-bar" id="filterBar">
-        <span class="project-filter-tag active" onclick="filterProjects('all', this)">全部</span>
-        {% set tags = [] %}
-        {% for p in projects %}
-          {% if p.category and p.category not in tags %}{% set _ = tags.append(p.category) %}{% endif %}
-        {% endfor %}
-        {% for tag in tags %}
-          <span class="project-filter-tag" onclick="filterProjects('{{ tag|e }}', this)">{{ tag }}</span>
-        {% endfor %}
-    </div>
-
-    <div class="s2-project-grid" id="projectGrid">
-        {% for p in projects %}
-        <div class="s2-project" data-pid="{{ p.id }}" data-pname="{{ p.name|e }}" data-category="{{ p.category|e if p.category else '' }}"
-             onclick="startOrder({{ p.id }}, '{{ p.name|e }}')">
-            <div class="pj-icon" style="background:{{ p.color or '#f1f5f9' }}">
-              {% if p.icon %}{{ p.icon|safe }}{% else %}📦{% endif %}
-            </div>
-            <div>
-              <div class="pj-name">{{ p.name }}</div>
-              <div class="pj-meta">{{ p.category if p.category else '通用' }}</div>
-            </div>
-            <div class="pj-bottom">
-              <span class="s2-price-pill">{{ p.price }} 元</span>
-            </div>
-        </div>
-        {% endfor %}
-        {% if not projects %}
-        <div class="project-empty">暂无可用项目</div>
-        {% endif %}
+    <h3>📢 平台公告</h3>
+    <div id="announcementsBox">
+        <div style="color:#94a3b8;font-size:0.85rem;text-align:center;padding:12px 0">加载中...</div>
     </div>
 </div>
 
-<!-- 最近收码记录 -->
+<!-- 最近收码 -->
 <div class="s2-card">
-  <h3>📜 最近收码</h3>
-  <div id="recentHistory">
-    <div class="s2-history-empty">暂无记录</div>
-  </div>
+    <h3>📜 最近收码</h3>
+    <div id="recentHistory">
+        <div style="color:#94a3b8;font-size:0.85rem;text-align:center;padding:12px 0">暂无记录</div>
+    </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ============ 状态管理 ============
-let currentVT = null, polling = false, secondsLeft = 200, countdownTimer = null;
-let csStartTime = null, csTimer2 = null;
-
-// ============ 提示音 (Web Audio API) ============
-let audioCtx = null;
-function playBeep() {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = 1200;
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.4);
-        // 第二声
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.type = 'sine';
-        osc2.frequency.value = 1600;
-        gain2.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.2);
-        gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-        osc2.start(audioCtx.currentTime + 0.2);
-        osc2.stop(audioCtx.currentTime + 0.6);
-    } catch(e) { /* 静默降级 */ }
-}
-
-// ============ Toast 通知 ============
-function showToast(message, type) {
-    if (!type) type = 'info';
-    const container = document.getElementById('toastContainer');
-    const el = document.createElement('div');
-    el.className = 's2-toast ' + type;
-    el.innerHTML = message;
-    container.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.remove(); }, 4000);
-}
-
-// ============ 分类筛选 ============
-let activeFilter = 'all';
-function filterProjects(category, el) {
-    activeFilter = category;
-    document.querySelectorAll('#filterBar .project-filter-tag').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
-    const cards = document.querySelectorAll('#projectGrid .s2-project');
-    cards.forEach(c => {
-        const cat = c.getAttribute('data-category') || '';
-        if (category === 'all' || cat === category) {
-            c.style.display = '';
-        } else {
-            c.style.display = 'none';
-        }
-    });
-}
-
-// ============ 页面加载 ============
-document.addEventListener('DOMContentLoaded', function() {
-    loadBalance();
-    loadTodayCount();
-    loadRecentHistory();
-
-    // 从 localStorage 恢复会话
-    const saved = localStorage.getItem('sms_current_vt');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            if (Date.now() - data.startedAt > 210000) {
-                localStorage.removeItem('sms_current_vt');
-                return;
-            }
-            currentVT = data.view_token;
-            secondsLeft = Math.max(0, 200 - Math.floor((Date.now() - data.startedAt) / 1000));
-            showSession(data.project_name, data.phone, secondsLeft);
-            resumeSession();
-        } catch(e) {
-            localStorage.removeItem('sms_current_vt');
-        }
-    }
-});
-
-// ============ 余额/今日计数 ============
+// 加载余额
 async function loadBalance() {
     try {
         const r = await fetch('/balance');
@@ -395,175 +122,55 @@ async function loadBalance() {
         document.getElementById('statBalance').textContent = '¥' + (d.balance || 0);
     } catch(e) {}
 }
-async function loadTodayCount() {
+loadBalance();
+
+// 加载今日收码数
+async function loadToday() {
     try {
         const r = await fetch('/today-count');
         const d = await r.json();
         document.getElementById('todayCount').textContent = d.count || 0;
     } catch(e) {}
 }
-async function loadRecentHistory() {
+loadToday();
+
+// 加载公告
+async function loadAnnouncements() {
+    try {
+        const r = await fetch('/announcements?json=1');
+        const d = await r.json();
+        const box = document.getElementById('announcementsBox');
+        if (d.ok && d.list && d.list.length > 0) {
+            box.innerHTML = d.list.map(function(a) {
+                const imp = a.priority >= 1 ? '<span class="ann-important">重要</span>' : '';
+                return '<div class="ann-item"><div class="ann-title">' + a.title + imp + '</div>' +
+                    '<div class="ann-content">' + a.content + '</div>' +
+                    '<div class="ann-meta">' + (a.created_at||'') + '</div></div>';
+            }).join('');
+        } else {
+            box.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;text-align:center;padding:12px 0">暂无公告</div>';
+        }
+    } catch(e) {}
+}
+loadAnnouncements();
+
+// 加载最近收码
+async function loadRecent() {
     try {
         const r = await fetch('/recent-sms');
-        if (!r.ok) return;
         const d = await r.json();
-        if (!d.ok || !d.list) return;
-        const el = document.getElementById('recentHistory');
-        if (d.list.length === 0) {
-            el.innerHTML = '<div class="s2-history-empty">暂无记录</div>'; return;
+        const box = document.getElementById('recentHistory');
+        if (d.ok && d.list && d.list.length > 0) {
+            box.innerHTML = d.list.map(function(s) {
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">' +
+                    '<div><strong>' + (s.phone||'-') + '</strong><span style="font-size:0.75rem;color:#94a3b8;margin-left:6px">' + (s.project_name||'') + '</span></div>' +
+                    '<div style="font-weight:700;color:#059669;letter-spacing:2px;font-family:Courier New,monospace">' + (s.code||'-') + '</div></div>';
+            }).join('');
+        } else {
+            box.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;text-align:center;padding:12px 0">暂无记录</div>';
         }
-        el.innerHTML = d.list.slice(0, 10).map(item => `
-            <div class="s2-history-item">
-                <div class="h-left">
-                    <span class="h-phone">${item.phone}</span>
-                    <span class="h-time">${item.time || ''}</span>
-                    <div style="font-size:0.75rem;color:#94a3b8">${item.project}</div>
-                </div>
-                <div>
-                    ${item.code ? '<span class="h-code">' + item.code + '</span>' : '<span style="color:#94a3b8;font-size:0.8rem">已释放</span>'}
-                </div>
-            </div>
-        `).join('');
     } catch(e) {}
 }
-
-// ============ 开始订单 ============
-async function startOrder(projectId, projectName) {
-    if (currentVT) {
-        if (!confirm('已有正在收码的会话，确定重新开始？')) return;
-        cleanupSession();
-    }
-    const r = await fetch('/start-order', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project_id: projectId})});
-    const d = await r.json();
-    if (!d.ok) { showToast('❌ ' + d.msg, 'error'); return; }
-    showSession(projectName, d.phone, 200);
-    currentVT = d.view_token;
-    localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:projectName, phone:d.phone, startedAt:Date.now()}));
-    startPolling();
-    loadBalance();
-    loadRecentHistory();
-    showToast('📞 已获取号码: ' + d.phone, 'info');
-}
-
-function showSession(projectName, phone, remainingSeconds) {
-    document.getElementById('currentSession').style.display = 'block';
-    document.getElementById('csProjectName').textContent = '📦 ' + projectName;
-    document.getElementById('csPhone').textContent = phone;
-    csStartTime = Date.now() - (200 - remainingSeconds) * 1000;
-    secondsLeft = remainingSeconds;
-    document.getElementById('csTimer').textContent = '⏱ ' + secondsLeft + '秒';
-    document.getElementById('csStateLabel').textContent = '⏳ 等待验证码';
-    document.getElementById('csCodeSection').style.display = 'none';
-    document.getElementById('csReleaseBtn').textContent = '释放号码';
-    document.getElementById('csReleaseBtn').disabled = false;
-    document.getElementById('csReleaseBtn').style.opacity = '1';
-    document.getElementById('csReleaseBtn').style.cursor = 'pointer';
-    if (countdownTimer) clearInterval(countdownTimer);
-    if (csTimer2) clearInterval(csTimer2);
-    countdownTimer = setInterval(updateTimer, 1000);
-    csTimer2 = setInterval(updateElapsed, 1000);
-    document.querySelectorAll('.s2-project').forEach(el => el.classList.add('disabled'));
-}
-
-function updateTimer() {
-    document.getElementById('csTimer').textContent = '⏱ ' + secondsLeft + '秒';
-    if (secondsLeft <= 0) {
-        clearInterval(countdownTimer);
-        document.getElementById('csStateLabel').textContent = '⏰ 已超时';
-        // 超时自动释放
-        autoRelease();
-        return;
-    }
-    secondsLeft--;
-}
-function updateElapsed() {
-    if (!csStartTime) return;
-    const sec = Math.floor((Date.now() - csStartTime) / 1000);
-    document.getElementById('csElapsed').textContent = sec + '秒前';
-}
-function copyPhone() {
-    const phone = document.getElementById('csPhone').textContent;
-    navigator.clipboard.writeText(phone).then(() => showToast('📋 已复制: ' + phone, 'info')).catch(() => {});
-}
-
-// ============ 轮询 ============
-function startPolling() { polling = true; pollSMS(); }
-async function pollSMS() {
-    if (!polling || !currentVT) return;
-    try {
-        const r = await fetch('/api/sms/' + currentVT);
-        const d = await r.json();
-        if (d.ok && d.code) { onCodeReceived(d.code, d.sms); return; }
-        if (d.msg && (d.msg.includes('余额不足') || d.msg.includes('没有账号'))) {
-            document.getElementById('csStateLabel').textContent = '❌ 没有账号';
-            polling = false; clearInterval(countdownTimer); return;
-        }
-        if (d.waiting) document.getElementById('csStateLabel').textContent = '⏳ 等待验证码中...';
-    } catch(e) {}
-    setTimeout(pollSMS, 3000);
-}
-
-function onCodeReceived(code, sms) {
-    polling = false;
-    if (countdownTimer) clearInterval(countdownTimer);
-    document.getElementById('csStateLabel').textContent = '✅ 已收到验证码';
-    document.getElementById('csCodeSection').style.display = 'block';
-    document.getElementById('csCodeDisplay').textContent = code;
-    document.getElementById('csSmsContent').textContent = sms || '(无短信内容)';
-    document.getElementById('csReleaseBtn').textContent = '✅ 已收到';
-    document.getElementById('csReleaseBtn').disabled = true;
-    document.getElementById('csReleaseBtn').style.opacity = '0.5';
-    document.getElementById('csReleaseBtn').style.cursor = 'default';
-    loadBalance();
-    loadRecentHistory();
-    // 播放提示音 + toast 成功通知
-    playBeep();
-    showToast('✅ 验证码: ' + code + '  已成功获取！', 'success');
-}
-
-async function resumeSession() {
-    try {
-        const r = await fetch('/api/sms/' + currentVT);
-        const d = await r.json();
-        if (d.ok && d.code) { onCodeReceived(d.code, d.sms); return; }
-        if (d.msg && d.msg.includes('不存在')) { cleanupSession(); return; }
-        if (d.waiting || (!d.ok && !d.msg)) startPolling();
-    } catch(e) {}
-}
-
-// ============ 释放号码 ============
-async function autoRelease() {
-    if (!currentVT) return;
-    showToast('⏰ 超时自动释放号码', 'info');
-    try {
-        const r = await fetch('/release-phone', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({view_token: currentVT})});
-        const d = await r.json();
-        if (d.ok) cleanupSession();
-    } catch(e) { cleanupSession(); }
-}
-
-async function releasePhone() {
-    if (!currentVT) return;
-    if (!confirm('确定释放该号码？')) return;
-    const r = await fetch('/release-phone', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({view_token: currentVT})});
-    const d = await r.json();
-    if (d.ok) {
-        document.getElementById('csStateLabel').textContent = '⏹ 已释放';
-        showToast('⏹ 号码已释放', 'info');
-        cleanupSession();
-        loadBalance();
-        loadRecentHistory();
-    }
-}
-
-function cleanupSession() {
-    polling = false;
-    if (countdownTimer) clearInterval(countdownTimer);
-    if (csTimer2) clearInterval(csTimer2);
-    currentVT = null; csStartTime = null;
-    localStorage.removeItem('sms_current_vt');
-    document.getElementById('currentSession').style.display = 'none';
-    document.querySelectorAll('.s2-project').forEach(el => el.classList.remove('disabled'));
-}
+loadRecent();
 </script>
 {% endblock %}

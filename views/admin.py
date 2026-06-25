@@ -1,4 +1,4 @@
-"""后台管理路由"""
+﻿"""后台管理路由"""
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session as flask_session
 from models import get_db
 from config import SITE_URL
@@ -61,8 +61,9 @@ def add_channel():
     markup_percent = float(request.form.get('markup_percent', 0))
     db = get_db()
     try:
-        db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent) VALUES (?,?,?,?,?)",
-                   (name, api_url, api_user, api_pass, markup_percent))
+        cl = int(request.form.get('concurrent_limit', 5))
+    db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit) VALUES (?,?,?,?,?,?)",
+                   (name, api_url, api_user, api_pass, markup_percent, cl))
         db.commit()
     except Exception as e:
         db.close()
@@ -106,9 +107,10 @@ def edit_channel(id):
     channel_type = request.form.get('channel_type', 'haozhuma')
     markup_percent = float(request.form.get('markup_percent', 0))
     db = get_db()
-    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?
+    cl = int(request.form.get('concurrent_limit', 5))
+    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?, concurrent_limit=?
                    WHERE id=?""",
-               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, id))
+               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, cl, id))
     db.commit()
     db.close()
     return jsonify({'ok': True})
@@ -293,12 +295,13 @@ def stats():
     total_cards = db.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
     used_cards = db.execute("SELECT COUNT(*) FROM cards WHERE used=1").fetchone()[0]
     total_sessions = db.execute("SELECT COUNT(*) FROM sms_sessions").fetchone()[0]
+    user_count = db.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
     total_balance = db.execute("SELECT SUM(balance) FROM accounts").fetchone()[0] or 0
 
     # JSON 返回（供 dashboard 调用）
     if request.args.get('json') == '1':
         db.close()
-        return jsonify({'channelCount': channel_count, 'projectCount': project_count, 'cardCount': total_cards, 'sessionCount': total_sessions})
+        return jsonify({'channelCount': channel_count, 'projectCount': project_count, 'cardCount': total_cards, 'sessionCount': total_sessions, 'userCount': user_count})
 
     # 最近订单
     recent = db.execute("""
