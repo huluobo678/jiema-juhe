@@ -14,11 +14,10 @@ def index():
     # 跟踪邀请链接
     ref = request.args.get('ref', '').strip()
     if ref:
-        resp = __import__('flask').make_response()
-        resp.set_cookie('invited_by', ref, max_age=30*24*3600)
-        # 重定向去掉 ref 参数，但保持路径
         from flask import redirect
-        return redirect('/', 302)
+        resp = redirect('/', 302)
+        resp.set_cookie('invited_by', ref, max_age=30*24*3600)
+        return resp
     
     db = get_db()
     projects = db.execute("""
@@ -313,8 +312,6 @@ def release_phone():
 
 # ========== 邮箱注册/绑定 ==========
 
-_verify_codes = {}
-
 @user_bp.route('/send-code', methods=['POST'])
 def send_code():
     """发送邮箱验证码（仅限 @qq.com）"""
@@ -325,7 +322,12 @@ def send_code():
         return jsonify({'ok': False, 'msg': '仅支持 QQ 邮箱（@qq.com）'})
 
     code = ''.join(random.choices('0123456789', k=6))
-    _verify_codes[email] = {'code': code, 'expire': __import__('time').time() + 600}
+    expire_at = __import__('time').time() + 600
+
+    db = get_db()
+    db.execute("INSERT INTO verify_codes (email, code, expire_at) VALUES (?,?,?)", (email, code, expire_at))
+    db.commit()
+    db.close()
 
     from lib.email import send_verify_code
     ok, msg = send_verify_code(email, code)
@@ -344,15 +346,30 @@ def register():
         account_token = request.cookies.get('account_token')
         if not account_token:
             return jsonify({'ok': False, 'msg': '请先兑换卡密'})
-        if email not in _verify_codes:
-            return jsonify({'ok': False, 'msg': '请先获取验证码'})
-        info = _verify_codes[email]
-        if __import__('time').time() > info['expire']:
-            return jsonify({'ok': False, 'msg': '验证码已过期'})
-        if info['code'] != code:
-            return jsonify({'ok': False, 'msg': '验证码错误'})
 
         db = get_db()
+        now = __import__('time').time()
+        row = db.execute(
+            "SELECT id, code, expire_at, used FROM verify_codes WHERE email=? ORDER BY id DESC LIMIT 1",
+            (email,)
+        ).fetchone()
+        if not row:
+            db.close()
+            return jsonify({'ok': False, 'msg': '请先获取验证码'})
+        if row['used']:
+            db.close()
+            return jsonify({'ok': False, 'msg': '验证码已使用过'})
+        if now > row['expire_at']:
+            db.close()
+            return jsonify({'ok': False, 'msg': '验证码已过期'})
+        if row['code'] != code:
+            db.close()
+            return jsonify({'ok': False, 'msg': '验证码错误'})
+
+        # 标记已使用
+        db.execute("UPDATE verify_codes SET used=1 WHERE id=?", (row['id'],))
+        # 清理旧验证码
+        db.execute("DELETE FROM verify_codes WHERE email=? AND id!=?", (email, row['id']))
         db.execute("UPDATE accounts SET email=?, email_verified=1 WHERE token=?", (email, account_token))
         db.commit()
         db.close()

@@ -119,6 +119,16 @@ def init_db():
             received_at TEXT
         );
 
+        -- 验证码（跨worker共享）
+        CREATE TABLE IF NOT EXISTS verify_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            code TEXT NOT NULL,
+            expire_at REAL NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
+        );
+        
         -- 管理员
         CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
