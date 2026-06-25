@@ -28,6 +28,11 @@
                 <button onclick="redeem()" style="padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap">兑换</button>
             </div>
 
+            <!-- 推荐人提示 -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <input type="text" id="referrerInput" placeholder="推荐人Token（选填）" style="flex:1;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.85rem;outline:none;color:#1e293b">
+                <span style="font-size:0.75rem;color:#94a3b8">🎁 返利5%</span>
+            </div>
             <!-- 项目选择区 -->
             <div style="margin-top:4px">
                 <div style="font-size:0.9rem;color:#64748b;margin-bottom:10px">选择项目开始收码</div>
@@ -91,6 +96,11 @@
         </div>
     </div>
 </div>
+<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <a href="/register" style="font-size:0.8rem;color:#64748b;text-decoration:none">📧 绑定邮箱</a>
+    <a href="https://qian.s888w.com" target="_blank" style="font-size:0.8rem;color:#64748b;text-decoration:none">🌍 海外号批发</a>
+    <a href="/user/announcements" style="font-size:0.8rem;color:#64748b;text-decoration:none">📢 公告</a>
+</div>
 
 <script>
 let currentViewToken = null;
@@ -113,7 +123,10 @@ async function loadBalance() {
 async function redeem() {
     const code = document.getElementById('codeInput').value.trim();
     if (!code) return alert('请输入卡密');
-    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'code='+encodeURIComponent(code)});
+    const ref = document.getElementById('referrerInput')?.value?.trim() || '';
+    let body = 'code='+encodeURIComponent(code);
+    if (ref) body += '&referred_by=' + encodeURIComponent(ref);
+    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: body});
     const d = await r.json();
     const el = document.getElementById('redeemResult');
     el.classList.remove('d-none');

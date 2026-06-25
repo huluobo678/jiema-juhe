@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绑定邮箱</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);min-height:100vh;padding:20px;display:flex;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;padding:32px;width:400px;max-width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+        <h4 style="margin:0 0 8px">📧 绑定邮箱</h4>
+        <p style="color:#64748b;font-size:0.9rem;margin-bottom:24px">绑定邮箱后可享受更多权益</p>
+
+        <div id="resultMsg" class="d-none" style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:0.9rem"></div>
+
+        <div class="mb-3">
+            <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:4px">邮箱地址</label>
+            <div style="display:flex;gap:8px">
+                <input type="email" id="emailInput" class="input-modern" placeholder="your@email.com" style="flex:1">
+                <button id="sendCodeBtn" class="btn-modern btn-primary-modern" onclick="sendCode()" style="white-space:nowrap">获取验证码</button>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:4px">验证码</label>
+            <input type="text" id="codeInput" class="input-modern" placeholder="输入6位验证码">
+        </div>
+
+        <button class="btn-modern btn-primary-modern" onclick="submitRegister()" style="width:100%">绑定邮箱</button>
+
+        <div style="margin-top:16px;text-align:center">
+            <a href="/" style="color:#64748b;font-size:0.85rem">← 返回首页</a>
+        </div>
+    </div>
+</div>
+<script>
+let codeTimer = null;
+let codeCooldown = 0;
+
+async function sendCode() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) return alert('请输入有效邮箱');
+    if (codeCooldown > 0) return;
+    
+    const btn = document.getElementById('sendCodeBtn');
+    btn.disabled = true;
+    btn.textContent = '发送中...';
+    
+    const r = await fetch('/send-code', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email: email})
+    });
+    const d = await r.json();
+    if (d.ok) {
+        codeCooldown = 60;
+        showMsg(d.msg, 'info');
+        codeTimer = setInterval(() => {
+            codeCooldown--;
+            btn.textContent = codeCooldown + '秒';
+            if (codeCooldown <= 0) {
+                clearInterval(codeTimer);
+                btn.textContent = '获取验证码';
+                btn.disabled = false;
+            }
+        }, 1000);
+    } else {
+        btn.disabled = false;
+        btn.textContent = '获取验证码';
+        showMsg(d.msg, 'error');
+    }
+}
+
+async function submitRegister() {
+    const email = document.getElementById('emailInput').value.trim();
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) return alert('请输入验证码');
+    const r = await fetch('/register', {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: 'email=' + encodeURIComponent(email) + '&code=' + encodeURIComponent(code)
+    });
+    const d = await r.json();
+    if (d.ok) {
+        showMsg('✅ ' + d.msg, 'success');
+        setTimeout(() => location.href = '/', 1500);
+    } else {
+        showMsg('❌ ' + d.msg, 'error');
+    }
+}
+
+function showMsg(msg, type) {
+    const el = document.getElementById('resultMsg');
+    el.classList.remove('d-none');
+    if (type === 'success') { el.style.background = '#f0fdf4'; el.style.color = '#166534'; el.style.border = '1px solid #bbf7d0'; }
+    else if (type === 'error') { el.style.background = '#fef2f2'; el.style.color = '#991b1b'; el.style.border = '1px solid #fecaca'; }
+    else { el.style.background = '#eff6ff'; el.style.color = '#1e40af'; el.style.border = '1px solid #bfdbfe'; }
+    el.textContent = msg;
+}
+</script>
+<style>.d-none{display:none}.mb-3{margin-bottom:16px}</style>
+</body>
+</html>

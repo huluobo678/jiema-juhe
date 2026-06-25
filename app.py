@@ -23,4 +23,4 @@ if __name__ == '__main__':
     print("Front: http://127.0.0.1:5000")
     print("Admin: http://127.0.0.1:5000/admin")
     print("Default admin: admin / admin123")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

@@ -1,7 +1,7 @@
 """前台用户路由"""
-import uuid
+import uuid, random
 from flask import Blueprint, render_template, request, jsonify, abort
-from models import get_db
+from models import get_db, calculate_final_price
 from config import SITE_URL
 
 user_bp = Blueprint('user', __name__)
@@ -11,17 +11,24 @@ def index():
     """首页 - 兑换+项目一体"""
     db = get_db()
     projects = db.execute("""
-        SELECT p.id, p.name, p.price, c.name as channel_name
+        SELECT p.id, p.name, p.price, p.base_price, c.markup_percent, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
+    # 用 calculate_final_price 算出显示价格
+    projects_clean = []
+    for p in projects:
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'])
+        # 不暴露渠道名
+        projects_clean.append({'id': p['id'], 'name': p['name'], 'price': final_price})
     db.close()
-    return render_template('user/index.html', projects=projects)
+    return render_template('user/index.html', projects=projects_clean)
 
 @user_bp.route('/redeem', methods=['POST'])
 def redeem():
     """兑换卡密"""
     code = request.form.get('code', '').strip()
+    referred_by = request.form.get('referred_by', '').strip()
     if not code:
         return jsonify({'ok': False, 'msg': '请输入卡密'})
 
@@ -40,10 +47,12 @@ def redeem():
             db.execute("UPDATE accounts SET balance=balance+? WHERE token=?", (card['credit'], account_token))
         else:
             account_token = uuid.uuid4().hex
-            db.execute("INSERT INTO accounts (token, balance) VALUES (?,?)", (account_token, card['credit']))
+            db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)", 
+                       (account_token, card['credit'], referred_by or None))
     else:
         account_token = uuid.uuid4().hex
-        db.execute("INSERT INTO accounts (token, balance) VALUES (?,?)", (account_token, card['credit']))
+        db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)",
+                   (account_token, card['credit'], referred_by or None))
 
     db.commit()
     db.close()
@@ -73,11 +82,15 @@ def announcements():
 @user_bp.route('/projects')
 def project_list():
     db = get_db()
-    projects = db.execute("""
-        SELECT p.id, p.name, p.price, c.name as channel_name
+    rows = db.execute("""
+        SELECT p.id, p.name, p.price, p.base_price, c.markup_percent
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
+    projects = []
+    for p in rows:
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'])
+        projects.append({'id': p['id'], 'name': p['name'], 'price': final_price})
     db.close()
     return render_template('user/projects.html', projects=projects)
 
@@ -118,15 +131,15 @@ def api_sms(view_token):
     if data.get('code') == 0 or data.get('code') == '0':
         code = data.get('yzm', '')
         sms_content = data.get('sms', '')
+        final_price = calculate_final_price(project['price'], project.get('base_price', 0), channel['markup_percent'])
         db2 = get_db()
-        db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (project['price'], s['account_token']))
+        db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (final_price, s['account_token']))
         db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
                        WHERE id=?""", (code, sms_content, s['id']))
         db2.commit()
         db2.close()
         return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone']})
 
-    # 上游报错 -> 显示没有账号
     err_msg = data.get('msg') or ''
     if '余额' in err_msg or '余额不足' in err_msg:
         return jsonify({'ok': False, 'msg': '没有账号'})
@@ -149,11 +162,12 @@ def start_order():
         db.close()
         return jsonify({'ok': False, 'msg': '参数错误'})
 
-    if float(acc['balance']) < project['price']:
-        db.close()
-        return jsonify({'ok': False, 'msg': f'余额不足，需要{project["price"]}元，当前{acc["balance"]}元'})
-
     channel = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
+    final_price = calculate_final_price(project['price'], project.get('base_price', 0), channel['markup_percent'])
+
+    if float(acc['balance']) < final_price:
+        db.close()
+        return jsonify({'ok': False, 'msg': f'余额不足，需要{final_price}元，当前{acc["balance"]}元'})
 
     from channels.haozhuma import HaoZhuMa
     hzm = HaoZhuMa(channel['api_url'], channel['api_user'], channel['api_pass'], channel['token'])
@@ -162,7 +176,6 @@ def start_order():
     code_val = phone_data.get('code')
     if code_val != 0 and code_val != '0':
         msg = phone_data.get('msg', '获取号码失败')
-        # 上游余额不足或没号 -> 统一显示 没有账号
         if '余额' in msg or '余额不足' in msg or '超限' in msg or '没有更多' in msg:
             msg = '没有账号'
         db.close()
@@ -204,3 +217,49 @@ def release_phone():
     db.commit()
     db.close()
     return jsonify({'ok': True, 'msg': '号码已释放'})
+
+# ========== 邮箱注册/绑定 ==========
+
+# 验证码临时存储
+_verify_codes = {}
+
+@user_bp.route('/send-code', methods=['POST'])
+def send_code():
+    """发送邮箱验证码"""
+    email = request.json.get('email', '').strip()
+    if '@' not in email:
+        return jsonify({'ok': False, 'msg': '邮箱格式不正确'})
+
+    code = ''.join(random.choices('0123456789', k=6))
+    _verify_codes[email] = {'code': code, 'expire': __import__('time').time() + 600}
+
+    from lib.email import send_verify_code
+    ok, msg = send_verify_code(email, code)
+    if ok:
+        return jsonify({'ok': True, 'msg': '验证码已发送'})
+    return jsonify({'ok': False, 'msg': msg})
+
+@user_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """注册/绑定邮箱页面"""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        code = request.form.get('code', '').strip()
+        account_token = request.cookies.get('account_token')
+        if not account_token:
+            return jsonify({'ok': False, 'msg': '请先兑换卡密'})
+        if email not in _verify_codes:
+            return jsonify({'ok': False, 'msg': '请先获取验证码'})
+        info = _verify_codes[email]
+        if __import__('time').time() > info['expire']:
+            return jsonify({'ok': False, 'msg': '验证码已过期'})
+        if info['code'] != code:
+            return jsonify({'ok': False, 'msg': '验证码错误'})
+
+        db = get_db()
+        db.execute("UPDATE accounts SET email=?, email_verified=1 WHERE token=?", (email, account_token))
+        db.commit()
+        db.close()
+        return jsonify({'ok': True, 'msg': '邮箱绑定成功'})
+
+    return render_template('user/register.html')

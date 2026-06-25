@@ -58,10 +58,11 @@ def add_channel():
     api_url = request.form['api_url']
     api_user = request.form.get('api_user', '')
     api_pass = request.form.get('api_pass', '')
+    markup_percent = float(request.form.get('markup_percent', 0))
     db = get_db()
     try:
-        db.execute("INSERT INTO channels (name, api_url, api_user, api_pass) VALUES (?,?,?,?)",
-                   (name, api_url, api_user, api_pass))
+        db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent) VALUES (?,?,?,?,?)",
+                   (name, api_url, api_user, api_pass, markup_percent))
         db.commit()
     except Exception as e:
         db.close()
@@ -95,11 +96,11 @@ def test_channel_login(id):
 @login_required
 def projects():
     db = get_db()
-    rows = db.execute("""
+    rows = [dict(r) for r in db.execute("""
         SELECT p.*, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         ORDER BY p.id
-    """).fetchall()
+    """).fetchall()]
     channels = db.execute("SELECT id, name FROM channels WHERE enabled=1").fetchall()
     db.close()
     return render_template('admin/projects.html', projects=rows, channels=channels)
@@ -240,6 +241,19 @@ def delete_announcement(id):
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+@admin_bp.route('/users')
+@login_required
+def users():
+    q = request.args.get('q', '').strip()
+    db = get_db()
+    if q:
+        rows = db.execute("""SELECT * FROM accounts WHERE token LIKE ? OR email LIKE ? ORDER BY id DESC""",
+                          (f'%{q}%', f'%{q}%')).fetchall()
+    else:
+        rows = db.execute("SELECT * FROM accounts ORDER BY id DESC LIMIT 200").fetchall()
+    db.close()
+    return render_template('admin/users.html', accounts=rows, q=q)
 
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 @login_required

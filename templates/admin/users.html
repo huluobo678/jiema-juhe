@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号管理</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        <h3>账号管理</h3>
+        <p style="color:var(--text-muted);margin-bottom:16px">管理用户账号</p>
+
+        <form method="get" style="margin-bottom:20px">
+            <div style="display:flex;gap:8px;max-width:400px">
+                <input type="text" name="q" class="input-modern" placeholder="搜索 token / 邮箱..." value="{{ q }}">
+                <button class="btn-modern btn-primary-modern" type="submit">搜索</button>
+                {% if q %}<a href="/admin/users" class="btn-modern btn-outline-modern" style="display:inline-flex;align-items:center;text-decoration:none">清除</a>{% endif %}
+            </div>
+        </form>
+
+        <table class="table-modern">
+            <thead><tr><th>ID</th><th>Token</th><th>余额</th><th>邮箱</th><th>验证</th><th>并发</th><th>创建时间</th></tr></thead>
+            <tbody>
+            {% for a in accounts %}
+            <tr>
+                <td>{{ a.id }}</td>
+                <td><code style="font-size:0.75rem">{{ a.token[:16] }}...</code></td>
+                <td><strong>{{ a.balance }}</strong> 元</td>
+                <td>{{ a.email or '-' }}</td>
+                <td>{{ '✅' if a.email_verified else '❌' }}</td>
+                <td>{{ a.concurrent_limit }}</td>
+                <td>{{ a.created_at }}</td>
+            </tr>
+            {% endfor %}
+            {% if not accounts %}
+            <tr><td colspan="7" style="text-align:center;color:#94a3b8">暂无用户</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

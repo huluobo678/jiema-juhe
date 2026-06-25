@@ -16,13 +16,15 @@
         <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加渠道</button>
 
         <table class="table-modern">
-            <thead><tr><th>ID</th><th>名称</th><th>API地址</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>ID</th><th>名称</th><th>API地址</th><th>加价%</th><th>定价方式</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
             {% for ch in channels %}
             <tr>
                 <td>{{ ch.id }}</td>
                 <td><strong>{{ ch.name }}</strong></td>
                 <td><code>{{ ch.api_url }}</code></td>
+                <td>{{ ch.markup_percent or 0 }}%</td>
+                <td>{{ '自动(加价)' if (ch.markup_percent or 0)|int > 0 else '不加价' }}</td>
                 <td>{{ '✅ 启用' if ch.enabled else '❌ 禁用' }}</td>
                 <td>
                     <button class="btn-modern btn-primary-modern" style="padding:6px 16px;font-size:0.85rem" onclick="testLogin({{ ch.id }})">测试登录</button>
@@ -45,6 +47,7 @@
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API地址</label><input name="api_url" class="input-modern" value="https://api.haozhuma.com"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API用户名</label><input name="api_user" class="input-modern"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API密码</label><input name="api_pass" type="password" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">加价百分比 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(0=不加价)</span></label><input name="markup_percent" type="number" step="0.1" value="0" class="input-modern"></div>
             </form>
         </div>
         <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">

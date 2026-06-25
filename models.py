@@ -3,6 +3,49 @@ import os
 from datetime import datetime, timedelta
 from config import DATABASE
 
+def _migrate_upgrade(conn):
+    """迁移旧表：添加新列"""
+    try:
+        conn.execute("ALTER TABLE channels ADD COLUMN markup_percent REAL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN email TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN email_verified INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE sms_sessions ADD COLUMN expire_at TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN base_price REAL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN base_price_type TEXT DEFAULT 'auto'")
+    except Exception:
+        pass
+    conn.commit()
+
+def calculate_final_price(project_price, project_base_price, channel_markup):
+    """计算最终售价"""
+    if project_price and float(project_price) > 0:
+        return float(project_price)
+    base = float(project_base_price or 1.0)
+    return round(base * (1 + float(channel_markup or 0) / 100), 2)
+
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -21,6 +64,7 @@ def init_db():
             api_pass TEXT,
             token TEXT,                          -- 缓存的token
             enabled INTEGER DEFAULT 1,
+            markup_percent REAL DEFAULT 0,       -- 加价百分比
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 
@@ -50,6 +94,10 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             token TEXT NOT NULL UNIQUE,            -- 用户身份token
             balance REAL NOT NULL DEFAULT 0,       -- 余额(元)
+            concurrent_limit INTEGER DEFAULT 5,    -- 并发上限
+            email TEXT,
+            email_verified INTEGER DEFAULT 0,
+            referred_by TEXT,                      -- 推荐人token
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 
@@ -66,6 +114,7 @@ def init_db():
             code TEXT,                            -- 收到的验证码
             sms_content TEXT,                     -- 完整短信
             view_token TEXT NOT NULL UNIQUE,       -- 查看链接token
+            expire_at TEXT,                        -- 过期时间
             created_at TEXT DEFAULT (datetime('now', 'localtime')),
             received_at TEXT
         );
@@ -88,6 +137,9 @@ def init_db():
         );
     ''')
     conn.commit()
+
+    # 尝试迁移旧表（加列）
+    _migrate_upgrade(conn)
 
     # 插入默认管理员
     cur = conn.execute("SELECT COUNT(*) FROM admins")
