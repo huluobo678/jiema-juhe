@@ -1,80 +1,93 @@
-"""豪猪接码平台适配器"""
+"""豪猪接码平台适配器 - 实现 ChannelBase 接口"""
 import requests
 import time
+from channels.base import ChannelBase
+from lib.circuit import circuit_registry
 
-API_PATHS = {
-    'login': '/sms/?api=login',
-    'summary': '/sms/?api=getSummary',
-    'getPhone': '/sms/?api=getPhone',
-    'getMessage': '/sms/?api=getMessage',
-    'addBlacklist': '/sms/?api=addBlacklist',
-}
+class HaoZhuMa(ChannelBase):
+    """豪猪渠道适配器"""
+    
+    API_PATHS = {
+        'login': '/sms/?api=login',
+        'summary': '/sms/?api=getSummary',
+        'getPhone': '/sms/?api=getPhone',
+        'getMessage': '/sms/?api=getMessage',
+        'addBlacklist': '/sms/?api=addBlacklist',
+    }
 
-class HaoZhuMa:
-    def __init__(self, api_url, api_user, api_pass, token=None):
-        self.api_url = api_url.rstrip('/')
-        self.api_user = api_user
-        self.api_pass = api_pass
-        self._token = token
-
+    def __init__(self, channel_id, name, config: dict):
+        super().__init__(channel_id, name, config)
+        self._token = config.get('token')
+        self.circuit = circuit_registry.get(f'channel:{name}')
+    
     def _req(self, path, params):
-        url = self.api_url + path
+        url = self.config['api_url'].rstrip('/') + path
         try:
             r = requests.get(url, params=params, timeout=15)
             return r.json()
+        except requests.Timeout:
+            return {'code': -1, 'msg': '请求超时'}
+        except requests.ConnectionError as e:
+            return {'code': -1, 'msg': f'连接失败: {e}'}
         except Exception as e:
             return {'code': -1, 'msg': str(e)}
 
     def _is_ok(self, data):
-        """豪猪code可能是字符串'0'或数字0"""
         code = data.get('code')
         return code == 0 or code == '0'
 
     def login(self):
         """登录获取token"""
-        data = self._req(API_PATHS['login'], {
-            'user': self.api_user,
-            'pass': self.api_pass,
+        data = self._req(self.API_PATHS['login'], {
+            'user': self.config['api_user'],
+            'pass': self.config['api_pass'],
         })
         if self._is_ok(data):
             self._token = data.get('token')
         return data
 
-    def get_summary(self):
-        """查询余额"""
-        return self._req(API_PATHS['summary'], {'token': self._token})
+    # ---- ChannelBase 接口实现 ----
 
-    def get_phone(self, sid, isp=None, province=None, uid=None, author=None):
-        """获取号码"""
-        params = {'token': self._token, 'sid': sid}
-        if isp: params['isp'] = isp
-        if province: params['Province'] = province
-        if uid: params['uid'] = uid
-        if author: params['author'] = author
-        return self._req(API_PATHS['getPhone'], params)
+    def ping(self) -> bool:
+        """健康检查：查余额/登录"""
+        if not self._token:
+            self.login()
+        if not self._token:
+            return False
+        data = self._req(self.API_PATHS['summary'], {'token': self._token})
+        ok = self._is_ok(data)
+        self.circuit.record(ok)
+        return ok
 
-    def get_message(self, sid, phone):
-        """获取验证码"""
-        return self._req(API_PATHS['getMessage'], {
-            'token': self._token,
-            'sid': sid,
-            'phone': phone,
+    def get_phone(self, project_sid) -> dict:
+        if not self._token:
+            self.login()
+        params = {'token': self._token, 'sid': project_sid}
+        data = self._req(self.API_PATHS['getPhone'], params)
+        self.circuit.record(self._is_ok(data))
+        return data
+
+    def get_message(self, project_sid, phone) -> dict:
+        if not self._token:
+            self.login()
+        data = self._req(self.API_PATHS['getMessage'], {
+            'token': self._token, 'sid': project_sid, 'phone': phone
         })
+        self.circuit.record(self._is_ok(data))
+        return data
 
-    def add_blacklist(self, sid, phone):
-        """拉黑号码"""
-        return self._req(API_PATHS['addBlacklist'], {
-            'token': self._token,
-            'sid': sid,
-            'phone': phone,
+    def add_blacklist(self, project_sid, phone) -> bool:
+        if not self._token:
+            self.login()
+        data = self._req(self.API_PATHS['addBlacklist'], {
+            'token': self._token, 'sid': project_sid, 'phone': phone
         })
+        return self._is_ok(data)
 
-    def wait_for_sms(self, sid, phone, max_wait=120, interval=3):
-        """轮询等待验证码"""
-        deadline = time.time() + max_wait
-        while time.time() < deadline:
-            data = self.get_message(sid, phone)
-            if self._is_ok(data):
-                return data  # 包含 yzm 和 sms 字段
-            time.sleep(interval)
-        return {'code': -1, 'msg': '超时未收到验证码'}
+    def get_balance(self) -> float:
+        if not self._token:
+            self.login()
+        data = self._req(self.API_PATHS['summary'], {'token': self._token})
+        if self._is_ok(data):
+            return float(data.get('money', 0))
+        return 0.0

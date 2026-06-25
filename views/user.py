@@ -3,6 +3,8 @@ import uuid, random
 from flask import Blueprint, render_template, request, jsonify, abort
 from models import get_db, calculate_final_price
 from config import SITE_URL
+from lib.scheduler import scheduler as smart_scheduler
+from channels import get_registry as get_channel_registry
 
 user_bp = Blueprint('user', __name__)
 
@@ -15,11 +17,9 @@ def index():
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
-    # 用 calculate_final_price 算出显示价格
     projects_clean = []
     for p in projects:
         final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'])
-        # 不暴露渠道名
         projects_clean.append({'id': p['id'], 'name': p['name'], 'price': final_price})
     db.close()
     return render_template('user/index.html', projects=projects_clean)
@@ -108,46 +108,20 @@ def sms_view(view_token):
         abort(404)
     return render_template('user/sms_view.html', session=session)
 
-@user_bp.route('/api/sms/<view_token>')
-def api_sms(view_token):
-    db = get_db()
-    s = db.execute("SELECT * FROM sms_sessions WHERE view_token=?", (view_token,)).fetchone()
-    if not s:
-        db.close()
-        return jsonify({'ok': False, 'msg': '会话不存在'})
+# ========== 渠道状态监控 ==========
 
-    if s['status'] == 'received':
-        db.close()
-        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone']})
+@user_bp.route('/channels/status')
+def channel_status():
+    channels = get_channel_registry().get_all()
+    from lib.health import health_checker
+    status = health_checker.status() if health_checker else []
+    return jsonify({'ok': True, 'channels': status})
 
-    channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
-    project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
-    db.close()
-
-    from channels.haozhuma import HaoZhuMa
-    hzm = HaoZhuMa(channel['api_url'], channel['api_user'], channel['api_pass'], channel['token'])
-    data = hzm.get_message(project['sid'], s['phone'])
-
-    if data.get('code') == 0 or data.get('code') == '0':
-        code = data.get('yzm', '')
-        sms_content = data.get('sms', '')
-        final_price = calculate_final_price(project['price'], project.get('base_price', 0), channel['markup_percent'])
-        db2 = get_db()
-        db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (final_price, s['account_token']))
-        db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
-                       WHERE id=?""", (code, sms_content, s['id']))
-        db2.commit()
-        db2.close()
-        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone']})
-
-    err_msg = data.get('msg') or ''
-    if '余额' in err_msg or '余额不足' in err_msg:
-        return jsonify({'ok': False, 'msg': '没有账号'})
-
-    return jsonify({'ok': False, 'msg': '等待验证码中...', 'waiting': True})
+# ========== 核心业务：获取号码 ==========
 
 @user_bp.route('/start-order', methods=['POST'])
 def start_order():
+    """使用智能调度器选渠道并获取号码"""
     project_id = request.json.get('project_id')
     account_token = request.cookies.get('account_token')
 
@@ -162,35 +136,117 @@ def start_order():
         db.close()
         return jsonify({'ok': False, 'msg': '参数错误'})
 
-    channel = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
-    final_price = calculate_final_price(project['price'], project.get('base_price', 0), channel['markup_percent'])
+    total_price = calculate_final_price(project['price'], project.get('base_price', 0), 0)
 
-    if float(acc['balance']) < final_price:
+    if float(acc['balance']) < total_price:
         db.close()
-        return jsonify({'ok': False, 'msg': f'余额不足，需要{final_price}元，当前{acc["balance"]}元'})
+        return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
 
-    from channels.haozhuma import HaoZhuMa
-    hzm = HaoZhuMa(channel['api_url'], channel['api_user'], channel['api_pass'], channel['token'])
-    phone_data = hzm.get_phone(project['sid'])
+    # ====== 智能调度器选渠道 ======
+    ch = smart_scheduler.pick_channel(project)
+    if ch is None:
+        db.close()
+        return jsonify({'ok': False, 'msg': '所有渠道繁忙或不可用，请稍后再试'})
+
+    # 获取号码
+    if not ch.acquire():
+        db.close()
+        return jsonify({'ok': False, 'msg': '渠道繁忙，请稍后再试'})
+
+    try:
+        phone_data = ch.get_phone(project['sid'])
+    except Exception as e:
+        ch.release()
+        db.close()
+        return jsonify({'ok': False, 'msg': f'获取号码失败: {e}'})
 
     code_val = phone_data.get('code')
     if code_val != 0 and code_val != '0':
+        ch.release()
         msg = phone_data.get('msg', '获取号码失败')
-        if '余额' in msg or '余额不足' in msg or '超限' in msg or '没有更多' in msg:
+        if '余额' in msg or '余额不足' in msg:
             msg = '没有账号'
         db.close()
         return jsonify({'ok': False, 'msg': msg})
 
+    # 扣款
+    channel_id = ch.channel_id
+    db.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (total_price, account_token))
+
     phone = phone_data['phone']
     view_token = uuid.uuid4().hex
 
+    # 绑定粘性会话
+    smart_scheduler.set_sticky(view_token, channel_id)
+
     db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, view_token, status)
                   VALUES (?,?,?,?,?, 'waiting')""",
-              (account_token, project_id, channel['id'], phone, view_token))
+              (account_token, project_id, channel_id, phone, view_token))
     db.commit()
     db.close()
 
     return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'view_token': view_token})
+
+# ========== 轮询短信 ==========
+
+@user_bp.route('/api/sms/<view_token>')
+def api_sms(view_token):
+    """轮询验证码"""
+    db = get_db()
+    s = db.execute("SELECT * FROM sms_sessions WHERE view_token=?", (view_token,)).fetchone()
+    if not s:
+        db.close()
+        return jsonify({'ok': False, 'msg': '会话不存在'})
+
+    if s['status'] == 'received':
+        db.close()
+        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone']})
+
+    # 从注册中心获取渠道实例（避免重复实例化）
+    ch = get_channel_registry().get(s['channel_id'])
+    if ch is None:
+        # 回退：直接构造
+        channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
+        project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
+        db.close()
+        if not channel or not project:
+            return jsonify({'ok': False, 'msg': '渠道信息丢失'})
+        from channels.haozhuma import HaoZhuMa
+        ch = HaoZhuMa(channel['id'], channel['name'], {
+            'api_url': channel['api_url'], 'api_user': channel['api_user'] or '',
+            'api_pass': channel['api_pass'] or '', 'token': channel['token'] or '',
+        })
+        # 没注册到调度器可以先用
+    else:
+        project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
+        channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
+        db.close()
+        if not project:
+            return jsonify({'ok': False, 'msg': '项目不存在'})
+
+    data = ch.get_message(project['sid'], s['phone'])
+    ch.release()  # 释放并发槽位
+
+    if data.get('code') == 0 or data.get('code') == '0':
+        code = data.get('yzm', '')
+        sms_content = data.get('sms', '')
+        final_price = calculate_final_price(project['price'], project.get('base_price', 0),
+                                            channel.get('markup_percent', 0) if channel else 0)
+        db2 = get_db()
+        db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (final_price, s['account_token']))
+        db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
+                       WHERE id=?""", (code, sms_content, s['id']))
+        db2.commit()
+        db2.close()
+        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone']})
+
+    err_msg = data.get('msg') or ''
+    if '余额' in err_msg or '余额不足' in err_msg:
+        return jsonify({'ok': False, 'msg': '没有账号'})
+
+    return jsonify({'ok': False, 'msg': '等待验证码中...', 'waiting': True})
+
+# ========== 释放号码 ==========
 
 @user_bp.route('/release-phone', methods=['POST'])
 def release_phone():
@@ -205,22 +261,41 @@ def release_phone():
         db.close()
         return jsonify({'ok': False, 'msg': '会话不存在'})
 
-    channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
     project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
-
-    if s['status'] == 'waiting':
-        from channels.haozhuma import HaoZhuMa
-        hzm = HaoZhuMa(channel['api_url'], channel['api_user'], channel['api_pass'], channel['token'])
-        hzm.add_blacklist(project['sid'], s['phone'])
-
-    db.execute("UPDATE sms_sessions SET status='released' WHERE id=?", (s['id'],))
-    db.commit()
     db.close()
+
+    if not project:
+        return jsonify({'ok': False, 'msg': '项目不存在'})
+
+    # 从注册中心获取渠道
+    ch = get_channel_registry().get(s['channel_id'])
+    if ch is None:
+        channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
+        if channel:
+            from channels.haozhuma import HaoZhuMa
+            ch = HaoZhuMa(channel['id'], channel['name'], {
+                'api_url': channel['api_url'], 'api_user': channel['api_user'] or '',
+                'api_pass': channel['api_pass'] or '', 'token': channel['token'] or '',
+            })
+
+    if s['status'] == 'waiting' and ch:
+        try:
+            ch.add_blacklist(project['sid'], s['phone'])
+        except:
+            pass
+
+    db2 = get_db()
+    db2.execute("UPDATE sms_sessions SET status='released' WHERE id=?", (s['id'],))
+    db2.commit()
+    db2.close()
+
+    # 释放粘性会话
+    smart_scheduler.release_sticky(view_token)
+
     return jsonify({'ok': True, 'msg': '号码已释放'})
 
 # ========== 邮箱注册/绑定 ==========
 
-# 验证码临时存储
 _verify_codes = {}
 
 @user_bp.route('/send-code', methods=['POST'])
