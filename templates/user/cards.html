@@ -1,0 +1,56 @@
+{% extends "user/layout.html" %}
+{% set page_title = "云枢速联 - 卡密充值" %}
+{% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>🎫 卡密充值</h2>
+    <p>输入卡密兑换余额，邀请好友享 5% 返利</p>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px">
+    <div style="flex:1;min-width:300px;max-width:500px">
+        <div style="background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+            <div id="redeemResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:0.9rem"></div>
+            <div style="margin-bottom:16px">
+                <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">卡密</div>
+                <input type="text" id="codeInput" placeholder="输入卡密兑换余额" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:16px">
+                <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">推荐人 Token（选填）</div>
+                <input type="text" id="referrerInput" placeholder="填写推荐人的账户Token，享5%返利" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+                <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px">你需先绑定 QQ 邮箱，推荐人也需绑定邮箱才可收到返利</div>
+            </div>
+            <button onclick="redeem()" style="width:100%;padding:12px;background:#059669;color:white;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer">立即兑换</button>
+        </div>
+    </div>
+    <div style="flex:1;min-width:280px;max-width:400px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">💡 提示</h3>
+        <ul style="padding-left:18px;color:#475569;line-height:1.9;font-size:0.9rem">
+            <li>卡密需向管理员购买获得</li>
+            <li>填写推荐人 Token 后，推荐人可获得你充值金额的 <strong>5%</strong></li>
+            <li>充值后余额可用于购买接码服务</li>
+            <li>余额 <strong>不可提现</strong></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function redeem() {
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code) return;
+    const ref = document.getElementById('referrerInput')?.value?.trim() || '';
+    let body = 'code=' + encodeURIComponent(code);
+    if (ref) body += '&referred_by=' + encodeURIComponent(ref);
+    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
+    const d = await r.json();
+    const el = document.getElementById('redeemResult');
+    el.style.display = 'block';
+    el.style.background = d.ok ? '#f0fdf4' : '#fef2f2';
+    el.style.color = d.ok ? '#166534' : '#991b1b';
+    el.style.border = d.ok ? '1px solid #bbf7d0' : '1px solid #fecaca';
+    el.textContent = d.msg;
+    if (d.account_token) document.cookie = 'account_token='+d.account_token+';max-age=2592000;path=/';
+    if (d.ok) { document.getElementById('codeInput').value = ''; refreshBalance(); }
+}
+</script>
+{% endblock %}

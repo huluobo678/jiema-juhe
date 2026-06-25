@@ -41,6 +41,21 @@ def redeem():
     db.execute("UPDATE cards SET used=1, used_at=datetime('now','localtime') WHERE id=?", (card['id'],))
 
     account_token = request.cookies.get('account_token')
+    final_referred_by = None
+
+    # 如果填了推荐人，检查双方邮箱验证状态
+    if referred_by:
+        referrer = db.execute("SELECT * FROM accounts WHERE token=?", (referred_by,)).fetchone()
+        if not referrer:
+            return jsonify({'ok': False, 'msg': '推荐人 Token 无效'})
+        if not referrer.get('email_verified'):
+            return jsonify({'ok': False, 'msg': '推荐人未绑定邮箱，暂不可返利。请先通知推荐人绑定QQ邮箱'})
+        if account_token:
+            cur_acc = db.execute("SELECT email_verified FROM accounts WHERE token=?", (account_token,)).fetchone()
+            if cur_acc and not cur_acc['email_verified']:
+                return jsonify({'ok': False, 'msg': '请先绑定QQ邮箱再填写推荐人。前往「绑定邮箱」菜单操作'})
+        final_referred_by = referred_by
+
     if account_token:
         acc = db.execute("SELECT * FROM accounts WHERE token=?", (account_token,)).fetchone()
         if acc:
@@ -48,11 +63,11 @@ def redeem():
         else:
             account_token = uuid.uuid4().hex
             db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)", 
-                       (account_token, card['credit'], referred_by or None))
+                       (account_token, card['credit'], final_referred_by))
     else:
         account_token = uuid.uuid4().hex
         db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)",
-                   (account_token, card['credit'], referred_by or None))
+                   (account_token, card['credit'], final_referred_by))
 
     db.commit()
     db.close()
@@ -300,10 +315,12 @@ _verify_codes = {}
 
 @user_bp.route('/send-code', methods=['POST'])
 def send_code():
-    """发送邮箱验证码"""
-    email = request.json.get('email', '').strip()
+    """发送邮箱验证码（仅限 @qq.com）"""
+    email = request.json.get('email', '').strip().lower()
     if '@' not in email:
         return jsonify({'ok': False, 'msg': '邮箱格式不正确'})
+    if not email.endswith('@qq.com'):
+        return jsonify({'ok': False, 'msg': '仅支持 QQ 邮箱（@qq.com）'})
 
     code = ''.join(random.choices('0123456789', k=6))
     _verify_codes[email] = {'code': code, 'expire': __import__('time').time() + 600}
@@ -316,9 +333,11 @@ def send_code():
 
 @user_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """注册/绑定邮箱页面"""
+    """注册/绑定QQ邮箱页面"""
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        if not email.endswith('@qq.com'):
+            return jsonify({'ok': False, 'msg': '仅支持 QQ 邮箱（@qq.com）'})
         code = request.form.get('code', '').strip()
         account_token = request.cookies.get('account_token')
         if not account_token:
@@ -338,6 +357,26 @@ def register():
         return jsonify({'ok': True, 'msg': '邮箱绑定成功'})
 
     return render_template('user/register.html')
+
+@user_bp.route('/user/cards')
+def user_cards():
+    """卡密充值页面"""
+    return render_template('user/cards.html')
+
+@user_bp.route('/user/account')
+def user_account():
+    """账户信息页面"""
+    account_token = request.cookies.get('account_token')
+    email = None
+    referred_by = None
+    if account_token:
+        db = get_db()
+        acc = db.execute("SELECT email, referred_by FROM accounts WHERE token=?", (account_token,)).fetchone()
+        if acc:
+            email = acc['email']
+            referred_by = acc['referred_by']
+        db.close()
+    return render_template('user/account.html', email=email, referred_by=referred_by)
 
 @user_bp.route('/logout')
 def logout():

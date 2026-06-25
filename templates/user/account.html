@@ -1,0 +1,44 @@
+{% extends "user/layout.html" %}
+{% set page_title = "云枢速联 - 账户信息" %}
+{% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>👤 账户信息</h2>
+    <p>查看账户详情与邀请返利说明</p>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px">
+    <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 20px">基本信息</h3>
+        <div class="info-row"><span class="label">余额</span><span class="val">¥<strong id="accBalance">{{ balance|default(0) }}</strong></span></div>
+        <div class="info-row"><span class="label">已绑定邮箱</span><span class="val" id="accEmail">{{ email or '未绑定' }}</span></div>
+        <div class="info-row"><span class="label">推荐人</span><span class="val">{{ referred_by or '无' }}</span></div>
+        <div class="info-row"><span class="label">邀请返利状态</span>
+            <span class="val" style="color:{{ '#059669' if email else '#dc2626' }}">{{ '✅ 已激活（绑定QQ邮箱即可返利）' if email else '❌ 未激活（绑定QQ邮箱即可参与返利）' }}</span>
+        </div>
+        <div class="info-row"><span class="label">返利率</span><span class="val">5%</span></div>
+    </div>
+    <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🎁 邀请返利说明</h3>
+        <ul style="padding-left:18px;color:#475569;line-height:1.8;font-size:0.9rem">
+            <li><strong>条件</strong>：必需先绑定 <strong>QQ 邮箱</strong>（@qq.com）才能参与返利</li>
+            <li>绑定邮箱后在兑换卡密时填写推荐人 Token，推荐人可获得被推荐人充值金额的 <strong>5%</strong> 返利</li>
+            <li>返利会实时充入推荐人账户余额</li>
+            <li>自己在注册时填写的推荐人不可更改</li>
+            <li>如需绑定邮箱，请点击左侧「绑定邮箱」菜单</li>
+        </ul>
+    </div>
+</div>
+<style>
+.info-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+.info-row:last-child { border-bottom:none; }
+.info-row .label { color:#64748b; font-size:0.9rem; }
+.info-row .val { color:#0f172a; font-size:0.9rem; }
+</style>
+{% endblock %}
+{% block scripts %}
+<script>
+fetch('/balance').then(r=>r.json()).then(d=>{
+    if(d.ok) document.getElementById('accBalance').textContent = d.balance;
+});
+</script>
+{% endblock %}
