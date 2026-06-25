@@ -1,42 +1,149 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>设置</title>
+    <title>系统设置 - 云枢智联</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+    .s2-section { max-width:600px; margin-bottom:32px; }
+    .s2-section h4 { font-size:1rem; font-weight:700; color:#0f172a; margin:0 0 16px; display:flex; align-items:center; gap:8px; }
+    .s2-section p.desc { font-size:0.8rem; color:#94a3b8; margin:0 0 16px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { font-weight:600; display:block; margin-bottom:4px; font-size:0.9rem; color:#1e293b; }
+    .form-group label small { font-weight:400; color:#94a3b8; font-size:0.8rem; }
+    .form-group input { width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:0.9rem; box-sizing:border-box; }
+    .form-group input:focus { outline:none; border-color:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+    .form-row { display:flex; gap:12px; }
+    .form-row .form-group { flex:1; }
+    .btn-row { display:flex; gap:10px; margin-top:8px; }
+    .result-box { margin-top:12px; padding:12px 16px; border-radius:10px; font-size:0.85rem; display:none; }
+    .result-box.success { display:block; background:#f0fdf4; color:#059669; border:1px solid #bbf7d0; }
+    .result-box.error { display:block; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+    .note-box { background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; font-size:0.8rem; color:#92400e; margin-bottom:16px; }
+    </style>
 </head>
 <body>
 <div class="admin-layout">
     <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
     <div class="main-content">
-        <h3>设置</h3>
-        <p style="color:var(--text-muted);margin-bottom:16px">修改管理员密码</p>
+        <h3>系统设置</h3>
 
-        <div class="card-generator" style="max-width:480px">
-            <h5 style="margin-bottom:16px">🔑 修改密码</h5>
-            <form id="passwordForm">
-                <div class="mb-3">
-                    <label style="font-weight:600;margin-bottom:4px;display:block">新密码</label>
-                    <input type="password" name="new_password" class="input-modern" required minlength="6" placeholder="至少6位">
+        <!-- SMTP -->
+        <div class="s2-section">
+            <h4>&#x1F4E7; SMTP 邮件配置</h4>
+            <p class="desc">用于发送注册验证码、密码找回、站内通知等邮件</p>
+            <div class="note-box">
+                <strong>配置规则：</strong>端口 465 必须开启 SSL 加密，不要使用 25/80 端口。
+                阿里云发信地址状态正常，无需额外验证。
+            </div>
+            <form id="smtpForm" onsubmit="return saveSMTP()">
+                <div class="form-group">
+                    <label>SMTP 服务器地址 <small>(主机)</small></label>
+                    <input name="smtp_host" id="smtp_host" value="{{ config.get('smtp_host', 'smtpdm.aliyun.com') }}" placeholder="smtpdm.aliyun.com">
                 </div>
-                <button class="btn-modern btn-primary-modern" onclick="return changePassword()">修改密码</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>端口</label>
+                        <input name="smtp_port" id="smtp_port" value="{{ config.get('smtp_port', '465') }}" placeholder="465">
+                    </div>
+                    <div class="form-group">
+                        <label>加密方式</label>
+                        <input value="SSL (默认启用)" disabled style="background:#f8fafc;color:#059669;font-weight:600">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>登录账号 / 发件邮箱</label>
+                    <input name="smtp_user" id="smtp_user" value="{{ config.get('smtp_user', '') }}" placeholder="yihua520@yunshuzhilian.asia">
+                </div>
+                <div class="form-group">
+                    <label>SMTP 登录密码</label>
+                    <input name="smtp_pass" id="smtp_pass" type="password" value="{{ config.get('smtp_pass', '') }}" placeholder="输入密码">
+                </div>
+                <div class="form-group">
+                    <label>发件人名称 <small>(自定义)</small></label>
+                    <input name="smtp_from_name" id="smtp_from_name" value="{{ config.get('smtp_from_name', '') }}" placeholder="云枢智联">
+                </div>
+                <div class="btn-row">
+                    <button class="btn-modern btn-primary-modern" type="submit">保存配置</button>
+                </div>
+                <div id="smtpResult" class="result-box"></div>
+            </form>
+        </div>
+
+        <!-- Test -->
+        <div class="s2-section">
+            <h4>&#x1F4E8; 测试发送邮件</h4>
+            <p class="desc">保存配置后，发送一封测试邮件验证是否正确</p>
+            <form id="testForm" onsubmit="return testEmail()">
+                <div class="form-group">
+                    <label>收件邮箱</label>
+                    <input name="test_to" id="test_to" value="1340647127@qq.com" placeholder="输入测试邮箱">
+                </div>
+                <div class="btn-row">
+                    <button class="btn-modern btn-primary-modern" type="submit">发送测试邮件</button>
+                </div>
+                <div id="testResult" class="result-box"></div>
+            </form>
+        </div>
+
+        <!-- Password -->
+        <div class="s2-section">
+            <h4>&#x1F511; 修改管理员密码</h4>
+            <form id="passwordForm" onsubmit="return changePassword()">
+                <div class="form-group">
+                    <label>新密码 <small>(至少6位)</small></label>
+                    <input type="password" name="new_password" required minlength="6" placeholder="输入新密码" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div class="btn-row">
+                    <button class="btn-modern btn-primary-modern" type="submit">修改密码</button>
+                </div>
+                <div id="pwdResult" class="result-box"></div>
             </form>
         </div>
     </div>
 </div>
 
 <script>
+async function saveSMTP() {
+    const form = document.getElementById('smtpForm');
+    const fd = new FormData(form);
+    fd.append('action', 'smtp');
+    const r = await fetch('/admin/settings', {method:'POST', body:fd});
+    const d = await r.json();
+    const box = document.getElementById('smtpResult');
+    box.className = 'result-box ' + (d.ok ? 'success' : 'error');
+    box.textContent = d.msg;
+    return false;
+}
+async function testEmail() {
+    const form = document.getElementById('testForm');
+    const fd = new FormData(form);
+    fd.append('action', 'test_email');
+    const btn = form.querySelector('button');
+    btn.textContent = '发送中...';
+    btn.disabled = true;
+    const r = await fetch('/admin/settings', {method:'POST', body:fd});
+    const d = await r.json();
+    btn.textContent = '发送测试邮件';
+    btn.disabled = false;
+    const box = document.getElementById('testResult');
+    box.className = 'result-box ' + (d.ok ? 'success' : 'error');
+    box.textContent = d.msg;
+    return false;
+}
 async function changePassword() {
     const form = document.getElementById('passwordForm');
-    const data = new FormData(form);
-    const r = await fetch('/admin/settings', {method:'POST', body:data});
+    const fd = new FormData(form);
+    fd.append('action', 'password');
+    const r = await fetch('/admin/settings', {method:'POST', body:fd});
     const d = await r.json();
-    alert(d.msg);
+    const box = document.getElementById('pwdResult');
+    box.className = 'result-box ' + (d.ok ? 'success' : 'error');
+    box.textContent = d.msg;
     if (d.ok) form.reset();
     return false;
 }
 </script>
-<style>.mb-3{margin-bottom:16px}</style>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import os
 from datetime import datetime, timedelta
 from config import DATABASE
