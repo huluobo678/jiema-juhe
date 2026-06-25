@@ -4,25 +4,34 @@
 {% block content %}
 <div class="page-header">
     <h2>🎫 卡密充值</h2>
-    <p>输入卡密兑换余额</p>
+    <p>购买卡密 → 兑换余额</p>
 </div>
 <div style="display:flex;flex-wrap:wrap;gap:20px">
     <div style="flex:1;min-width:300px;max-width:500px">
         <div style="background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-            <div id="redeemResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:0.9rem"></div>
-            <div style="margin-bottom:16px">
-                <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">卡密</div>
-                <input type="text" id="codeInput" placeholder="输入卡密兑换余额" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+            <!-- 购买卡密入口 -->
+            <a href="https://pay.ldxp.cn/shop/5LWTNV9V" target="_blank" style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:10px;font-weight:700;font-size:1.05rem;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:20px">
+                🛒 购买卡密
+            </a>
+
+            <!-- 兑换区 -->
+            <div style="border-top:1px solid #e2e8f0;padding-top:20px">
+                <div id="redeemResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:0.9rem"></div>
+                <div style="margin-bottom:16px">
+                    <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">卡密</div>
+                    <input type="text" id="codeInput" placeholder="输入卡密兑换余额" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+                </div>
+                <button onclick="redeem()" style="width:100%;padding:12px;background:#059669;color:white;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer">立即兑换</button>
             </div>
-            <button onclick="redeem()" style="width:100%;padding:12px;background:#059669;color:white;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer">立即兑换</button>
         </div>
     </div>
     <div style="flex:1;min-width:280px;max-width:400px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
         <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">💡 提示</h3>
         <ul style="padding-left:18px;color:#475569;line-height:1.9;font-size:0.9rem">
-            <li>卡密需向管理员购买获得</li>
+            <li>点击「购买卡密」前往 <strong>链动小铺</strong> 购买</li>
+            <li>购买后拿到卡密，输入到上方兑换框</li>
             <li>充值后余额可用于购买接码服务</li>
-            <li>绑定 QQ 邮箱后可生成<strong>邀请链接</strong>，好友通过你的链接充值你享 5% 返利</li>
+            <li>绑定 QQ 邮箱后可生成<strong>邀请链接</strong>，邀请好友享 5% 返利</li>
             <li>余额 <strong>不可提现</strong></li>
         </ul>
     </div>
@@ -33,7 +42,7 @@
 async function redeem() {
     const code = document.getElementById('codeInput').value.trim();
     if (!code) return;
-    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'code='+encodeURIComponent(code)});
+    const r = await fetch('/redeem', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'code=*** + encodeURIComponent(code)});
     const d = await r.json();
     const el = document.getElementById('redeemResult');
     el.style.display = 'block';
