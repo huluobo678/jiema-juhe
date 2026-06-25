@@ -10,7 +10,6 @@
 <div class="admin-layout">
     <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
     <div class="main-content">
-        {% block content %}
         <h3>概况</h3>
         <p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
 
@@ -33,6 +32,27 @@
             </div>
         </div>
 
+        <!-- 渠道状态面板 -->
+        <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
+            <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🔌 渠道状态</h3>
+            <div id="channelStatusPanel">
+                <table class="table-modern" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">渠道</th>
+                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">状态</th>
+                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">熔断器</th>
+                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">并发</th>
+                            <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">最后健康</th>
+                        </tr>
+                    </thead>
+                    <tbody id="channelStatusBody">
+                        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <hr style="border:none;border-top:1px solid var(--border);margin:32px 0">
 
         <!-- 一键部署 -->
@@ -43,8 +63,6 @@
             <span id="deployStatus" style="font-size:0.85rem;color:var(--text-muted)"></span>
         </div>
         <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
-
-        {% endblock %}
     </div>
 </div>
 
@@ -60,6 +78,33 @@ async function loadStats() {
             document.getElementById('sessionCount').textContent = d.sessionCount;
         }
     } catch(e) {}
+}
+
+async function loadChannelStatus() {
+    try {
+        const r = await fetch('/channels/status');
+        const d = await r.json();
+        const tbody = document.getElementById('channelStatusBody');
+        if (!d.ok || !d.channels || d.channels.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">暂无渠道</td></tr>';
+            return;
+        }
+        tbody.innerHTML = d.channels.map(function(ch) {
+            var statusIcon = ch.alive ? '✅' : '❌';
+            var statusColor = ch.alive ? '#22c55e' : '#ef4444';
+            var cbIcon = ch.circuit === 'closed' ? '✅' : ch.circuit === 'open' ? '🔴' : '🟡';
+            var cbLabel = ch.circuit === 'closed' ? '正常' : ch.circuit === 'open' ? '熔断' : '半开';
+            var cbColor = ch.circuit === 'open' ? '#ef4444' : '#22c55e';
+            var concurrency = (ch.concurrent||0) + '/' + (ch.concurrent_limit||5);
+            return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>' + (ch.name||ch.id) + '</strong></td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+statusColor+'">'+statusIcon+' '+(ch.alive?'正常':'死亡')+'</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+cbColor+';font-weight:'+(ch.circuit==='open'?700:400)+'">'+cbIcon+' '+cbLabel+'</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+concurrency+'</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+(ch.last_ping||'-')+'</td></tr>';
+        }).join('');
+    } catch(e) {
+        document.getElementById('channelStatusBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px">加载失败</td></tr>';
+    }
 }
 
 async function deploy() {
@@ -79,14 +124,16 @@ async function deploy() {
     } catch(e) {
         status.textContent = '❌ ' + e;
     }
-    setTimeout(() => {
+    setTimeout(function() {
         btn.disabled = false;
         btn.textContent = '部署';
-        status.textContent = '✅ 请刷新页面确认效果'; 
+        status.textContent = '✅ 请刷新页面确认效果';
     }, 5000);
 }
 
 loadStats();
+loadChannelStatus();
+setInterval(loadChannelStatus, 10000);
 </script>
 </body>
 </html>

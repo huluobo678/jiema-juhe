@@ -3,113 +3,233 @@
 {% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
 
 {% block content %}
+<style>
+/* sub2api 风格样式 */
+.s2-stat-grid {
+  display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 24px;
+}
+@media (min-width: 1024px) {
+  .s2-stat-grid { grid-template-columns: repeat(4,1fr); }
+}
+.s2-stat-card {
+  background: #fff; border-radius: 16px; padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
+  display: flex; align-items: center; gap: 16px;
+}
+.s2-stat-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.s2-stat-icon svg { width: 22px; height: 22px; }
+.s2-stat-body { flex: 1; }
+.s2-stat-body .label { font-size: 0.75rem; color: #64748b; margin-bottom: 2px; }
+.s2-stat-body .value { font-size: 1.5rem; font-weight: 700; color: #0f172a; line-height: 1.2; }
+.s2-stat-body .sub { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+
+.s2-card {
+  background: #fff; border-radius: 16px; padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+.s2-card h3 { font-size: 1rem; font-weight: 600; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+
+.s2-project-grid { display: flex; flex-direction: column; gap: 8px; }
+.s2-project {
+  background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px 18px;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.s2-project:hover {
+  border-color: #059669; transform: translateX(3px);
+  box-shadow: 0 2px 8px rgba(5,150,105,0.12);
+}
+.s2-project .info { display: flex; align-items: center; gap: 10px; }
+.s2-project .info .icon { font-size: 1.1rem; }
+.s2-project .info .name { font-weight: 600; color: #1e293b; font-size: 0.95rem; }
+.s2-price-pill {
+  background: linear-gradient(135deg,#059669,#10b981); color: white;
+  padding: 5px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; white-space: nowrap;
+}
+
+/* 弹窗 overlay */
+.s2-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.s2-overlay.open { display: flex; }
+.s2-overlay-bg {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+.s2-modal {
+  position: relative; background: #fff; border-radius: 20px;
+  width: calc(100% - 32px); max-width: 440px; margin: auto;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  overflow: hidden; animation: modalIn 0.25s ease;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.s2-modal-header {
+  padding: 20px 24px; border-bottom: 1px solid #f1f5f9;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.s2-modal-header .title { font-weight: 600; color: #0f172a; font-size: 1rem; }
+.s2-modal-header .close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; padding: 0 4px; line-height: 1; }
+.s2-modal-body { padding: 32px 24px; text-align: center; }
+.s2-modal-body .phone-label { font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; }
+.s2-modal-body .phone-number { font-size: 1.8rem; font-weight: 700; color: #059669; font-family: 'Courier New',monospace; letter-spacing: 2px; margin-bottom: 8px; }
+.s2-modal-body .countdown { font-size: 1.1rem; font-weight: 600; color: #64748b; margin-bottom: 24px; }
+.s2-spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #059669; border-radius: 50%; animation: spin 1s linear infinite; }
+.s2-modal-body .waiting-text { color: #64748b; font-size: 1rem; margin-top: 14px; }
+.s2-modal-body .waiting-hint { color: #94a3b8; font-size: 0.8rem; margin-top: 4px; }
+.s2-modal-body .code-value { font-size: 2.8rem; font-weight: 800; color: #059669; letter-spacing: 8px; font-family: 'Courier New',monospace; animation: codePulse 0.5s ease; }
+.s2-modal-body .sms-body { background: #f8fafc; border-radius: 8px; padding: 12px; margin-top: 14px; color: #475569; font-size: 0.85rem; text-align: left; line-height: 1.5; border: 1px solid #e2e8f0; }
+.s2-modal-footer { padding: 16px 24px; border-top: 1px solid #f1f5f9; display: flex; gap: 10px; justify-content: center; }
+.s2-btn-red { padding: 8px 20px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+.s2-btn-red:disabled { opacity: 0.5; cursor: default; }
+.s2-btn-ghost { padding: 8px 20px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
+.s2-error { padding: 12px; color: #dc2626; font-size: 0.85rem; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; margin-top: 12px; }
+.s2-overlay .balance-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; color: #059669; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
+</style>
+
 <div class="page-header">
     <h2>📱 仪表盘</h2>
     <p>兑换卡密 → 选择项目 → 接收验证码</p>
 </div>
 
-<div id="stepRedeem">
-    <!-- 统计卡片 -->
-    <div class="stat-grid" style="margin-bottom:20px">
-        <div class="stat-card">
+<!-- 统计卡 (sub2api 风格) -->
+<div class="s2-stat-grid">
+    <div class="s2-stat-card">
+        <div class="s2-stat-icon" style="background:#d1fae5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="s2-stat-body">
             <div class="label">当前余额</div>
             <div class="value" id="statBalance">¥0</div>
+            <div class="sub">可用余额</div>
         </div>
-        <div class="stat-card">
+    </div>
+    <div class="s2-stat-card">
+        <div class="s2-stat-icon" style="background:#dbeafe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        </div>
+        <div class="s2-stat-body">
             <div class="label">可用项目</div>
             <div class="value">{{ projects|length }}</div>
+            <div class="sub">点击开始收码</div>
         </div>
-        <div class="stat-card">
+    </div>
+    <div class="s2-stat-card">
+        <div class="s2-stat-icon" style="background:#fef3c7">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div class="s2-stat-body">
+            <div class="label">今日收码</div>
+            <div class="value" id="todayCount">-</div>
+            <div class="sub">成功接收</div>
+        </div>
+    </div>
+    <div class="s2-stat-card">
+        <div class="s2-stat-icon" style="background:#ede9fe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </div>
+        <div class="s2-stat-body">
             <div class="label">邀请返利</div>
-            <div class="value" style="font-size:1.2rem">5%</div>
+            <div class="value">5%</div>
+            <div class="sub">填写邀请人Token</div>
         </div>
     </div>
+</div>
 
-    <!-- 卡密兑换 -->
-    <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
-        <div style="font-size:1.05rem;font-weight:600;color:#0f172a;margin-bottom:16px">🎫 卡密兑换</div>
-        <div id="redeemResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:0.9rem"></div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input type="text" id="codeInput" placeholder="输入卡密兑换余额" style="flex:1;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
-            <button onclick="redeem()" style="padding:10px 20px;background:#059669;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap">兑换</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-            <input type="text" id="referrerInput" placeholder="推荐人Token（选填，享5%返利）" style="flex:1;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.85rem;outline:none">
-            <span style="font-size:0.75rem;color:#94a3b8;white-space:nowrap">🎁 返利5%</span>
-        </div>
+<!-- 卡密兑换卡片 -->
+<div class="s2-card">
+    <h3>🎫 卡密兑换</h3>
+    <div id="redeemResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:0.9rem"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="codeInput" placeholder="输入卡密兑换余额" style="flex:1;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+        <button onclick="redeem()" style="padding:10px 24px;background:#059669;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap">兑换</button>
     </div>
+    <div style="display:flex;align-items:center;gap:8px">
+        <input type="text" id="referrerInput" placeholder="推荐人Token（选填，享5%返利）" style="flex:1;padding:8px 12px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.85rem;outline:none">
+        <span style="font-size:0.75rem;color:#94a3b8;white-space:nowrap">🎁 返利5%</span>
+    </div>
+</div>
 
-    <!-- 项目列表 -->
-    <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
-        <div style="font-size:1.05rem;font-weight:600;color:#0f172a;margin-bottom:16px">📋 选择项目开始收码</div>
+<!-- 项目列表 -->
+<div class="s2-card">
+    <h3>📋 选择项目开始收码</h3>
+    <div class="s2-project-grid">
         {% for p in projects %}
-        <div onclick="startOrder({{ p.id }}, '{{ p.name|e }}')" 
-             style="background:#fff;border:2px solid #e2e8f0;border-radius:10px;padding:14px 18px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"
-             onmouseover="this.style.borderColor='#059669';this.style.transform='translateX(3px)';this.style.boxShadow='0 2px 8px rgba(5,150,105,0.12)'"
-             onmouseout="this.style.borderColor='#e2e8f0';this.style.transform='none';this.style.boxShadow='none'">
-            <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-size:1.2rem">📦</span>
-                <span style="font-weight:600;font-size:1rem;color:#1e293b">{{ p.name }}</span>
+        <div class="s2-project" onclick="openModal({{ p.id }}, '{{ p.name|e }}')">
+            <div class="info">
+                <span class="icon">📦</span>
+                <span class="name">{{ p.name }}</span>
             </div>
-            <div style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:5px 14px;border-radius:20px;font-weight:700;font-size:0.95rem">{{ p.price }} 元</div>
+            <span class="s2-price-pill">{{ p.price }} 元</span>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- 收码区域 -->
-<div id="stepSMS" style="display:none;background:#fff;border-radius:12px;padding:32px 24px;text-align:center;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <span style="color:#0f172a;font-size:1.1rem;font-weight:600" id="projectName">项目名</span>
-        <span style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#059669;padding:4px 12px;border-radius:20px;font-weight:600;font-size:0.85rem">💰 <span id="balanceDisplay2">0</span> 元</span>
-    </div>
-    <div style="margin-bottom:16px">
-        <div style="color:#94a3b8;font-size:0.85rem;margin-bottom:4px">当前号码</div>
-        <div style="color:#0f172a;font-size:1.8rem;font-weight:700;font-family:'Courier New',monospace;letter-spacing:2px" id="phoneDisplay">---</div>
-    </div>
-    <div style="margin-bottom:20px">
-        <span style="color:#64748b;font-size:1.2rem;font-weight:600">⏱ <span id="countdown">200</span>秒</span>
-    </div>
-    <div id="waitingArea">
-        <div style="display:inline-block;width:44px;height:44px;border:3px solid #e2e8f0;border-top-color:#059669;border-radius:50%;animation:spin 1s linear infinite"></div>
-        <div style="color:#64748b;font-size:1.05rem;margin-top:14px">等待验证码中...</div>
-        <div style="color:#94a3b8;font-size:0.8rem;margin-top:4px">自动轮询，收到即止</div>
-    </div>
-    <div id="codeArea" style="display:none">
-        <div style="color:#94a3b8;font-size:0.85rem;margin-bottom:8px">验证码</div>
-        <div style="font-size:3rem;font-weight:800;color:#059669;letter-spacing:8px;font-family:'Courier New',monospace" id="codeDisplay">---</div>
-        <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-top:14px;color:#475569;font-size:0.85rem;text-align:left;line-height:1.5;border:1px solid #e2e8f0" id="smsDisplay"></div>
-    </div>
-    <div id="timeoutArea" style="display:none">
-        <div style="color:#94a3b8;font-size:0.95rem;margin-bottom:10px">⏰ 超时未收到</div>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-            <button style="padding:8px 18px;font-size:0.85rem;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:20px;cursor:pointer" onclick="releasePhone()">释放号码</button>
-            <button style="padding:8px 18px;font-size:0.85rem;background:#059669;color:white;border:none;border-radius:20px;cursor:pointer" onclick="backToHome()">重新选择</button>
+<!-- 收码弹窗 (overlay) -->
+<div class="s2-overlay" id="smsModal">
+    <div class="s2-overlay-bg" onclick="closeModal()"></div>
+    <div class="s2-modal">
+        <div class="s2-modal-header">
+            <span class="title" id="modalProjectName">项目</span>
+            <span class="balance-badge">💰 <span id="modalBalance">0</span> 元</span>
+            <button class="close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="s2-modal-body">
+            <div class="phone-label">当前号码</div>
+            <div class="phone-number" id="modalPhone">---</div>
+            <div class="countdown">⏱ <span id="modalCountdown">200</span>秒</div>
+
+            <div id="modalWaiting">
+                <div class="s2-spinner"></div>
+                <div class="waiting-text">等待验证码中...</div>
+                <div class="waiting-hint">自动轮询，收到即止</div>
+            </div>
+
+            <div id="modalCode" style="display:none">
+                <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px">验证码</div>
+                <div class="code-value" id="modalCodeDisplay">---</div>
+                <div class="sms-body" id="modalSMSContent"></div>
+            </div>
+
+            <div id="modalTimeout" style="display:none">
+                <div style="color:#94a3b8;font-size:0.95rem;margin-bottom:10px">⏰ 超时未收到</div>
+            </div>
+
+            <div id="modalError" style="display:none" class="s2-error"></div>
+        </div>
+        <div class="s2-modal-footer">
+            <button class="s2-btn-red" id="modalReleaseBtn" onclick="releasePhone()">释放号码</button>
+            <button class="s2-btn-ghost" onclick="closeModal()">关闭</button>
         </div>
     </div>
-    <div id="errorArea" style="display:none;padding:12px;color:#dc2626;font-size:0.85rem;border:1px solid #fecaca;border-radius:8px;background:#fef2f2"></div>
-    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center">
-        <button id="releaseBtn" style="padding:8px 18px;font-size:0.85rem;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:20px;cursor:pointer" onclick="releasePhone()">释放号码</button>
-        <button style="padding:8px 18px;font-size:0.85rem;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer" onclick="backToHome()">← 返回</button>
-    </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-let currentViewToken = null;
-let polling = false;
-let secondsLeft = 200;
-let countdownTimer = null;
+let currentViewToken = null, polling = false, secondsLeft = 200, countdownTimer = null;
 
 async function loadBalance() {
     try {
         const r = await fetch('/balance');
         const d = await r.json();
-        const bal = d.balance || 0;
-        document.getElementById('statBalance').textContent = '¥' + bal;
-        document.getElementById('balanceDisplay2').textContent = bal;
+        document.getElementById('statBalance').textContent = '¥' + (d.balance || 0);
+        refreshBalance();
     } catch(e) {}
+}
+async function loadTodayCount() {
+    try {
+        const r = await fetch('/history');
+        const html = await r.text();
+        // 简单dom解析, fallback to '-'
+    } catch(e) {}
+    document.getElementById('todayCount').textContent = '-';
 }
 
 async function redeem() {
@@ -131,27 +251,39 @@ async function redeem() {
     loadBalance();
 }
 
+function openModal(projectId, projectName) {
+    document.getElementById('smsModal').classList.add('open');
+    startOrder(projectId, projectName);
+}
+
+function closeModal() {
+    polling = false; if (countdownTimer) clearInterval(countdownTimer);
+    currentViewToken = null;
+    document.getElementById('smsModal').classList.remove('open');
+    loadBalance();
+}
+
 async function startOrder(projectId, projectName) {
     const r = await fetch('/start-order', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project_id: projectId})});
     const d = await r.json();
     if (!d.ok) { alert('❌ ' + d.msg); return; }
 
-    document.getElementById('stepRedeem').style.display = 'none';
-    document.getElementById('stepSMS').style.display = 'block';
-    document.getElementById('projectName').textContent = projectName;
-    document.getElementById('phoneDisplay').textContent = d.phone;
-    document.getElementById('waitingArea').style.display = 'block';
-    document.getElementById('codeArea').style.display = 'none';
-    document.getElementById('timeoutArea').style.display = 'none';
-    document.getElementById('errorArea').style.display = 'none';
-    document.getElementById('releaseBtn').textContent = '释放号码';
-    document.getElementById('releaseBtn').disabled = false;
-    document.getElementById('releaseBtn').style.opacity = '1';
-    document.getElementById('releaseBtn').style.cursor = 'pointer';
+    document.getElementById('modalProjectName').textContent = projectName;
+    document.getElementById('modalPhone').textContent = d.phone;
+    document.getElementById('modalBalance').textContent = d.balance || document.getElementById('statBalance').textContent.replace('¥','');
+
+    document.getElementById('modalWaiting').style.display = 'block';
+    document.getElementById('modalCode').style.display = 'none';
+    document.getElementById('modalTimeout').style.display = 'none';
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalReleaseBtn').textContent = '释放号码';
+    document.getElementById('modalReleaseBtn').disabled = false;
+    document.getElementById('modalReleaseBtn').style.opacity = '1';
+    document.getElementById('modalReleaseBtn').style.cursor = 'pointer';
 
     currentViewToken = d.view_token;
     secondsLeft = 200;
-    document.getElementById('countdown').textContent = secondsLeft;
+    document.getElementById('modalCountdown').textContent = secondsLeft;
     polling = true;
     if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = setInterval(updateTimer, 1000);
@@ -160,12 +292,11 @@ async function startOrder(projectId, projectName) {
 }
 
 function updateTimer() {
-    document.getElementById('countdown').textContent = secondsLeft;
+    document.getElementById('modalCountdown').textContent = secondsLeft;
     if (secondsLeft <= 0) {
-        polling = false;
-        if (countdownTimer) clearInterval(countdownTimer);
-        document.getElementById('waitingArea').style.display = 'none';
-        document.getElementById('timeoutArea').style.display = 'block';
+        polling = false; if (countdownTimer) clearInterval(countdownTimer);
+        document.getElementById('modalWaiting').style.display = 'none';
+        document.getElementById('modalTimeout').style.display = 'block';
         return;
     }
     secondsLeft--;
@@ -177,24 +308,23 @@ async function pollSMS() {
         const r = await fetch('/api/sms/' + currentViewToken);
         const d = await r.json();
         if (d.ok && d.code) {
-            polling = false;
-            if (countdownTimer) clearInterval(countdownTimer);
-            document.getElementById('waitingArea').style.display = 'none';
-            document.getElementById('codeArea').style.display = 'block';
-            document.getElementById('codeDisplay').textContent = d.code;
-            document.getElementById('smsDisplay').textContent = d.sms || '(无短信内容)';
-            document.getElementById('releaseBtn').textContent = '✅ 已收到';
-            document.getElementById('releaseBtn').disabled = true;
-            document.getElementById('releaseBtn').style.opacity = '0.5';
-            document.getElementById('releaseBtn').style.cursor = 'default';
+            polling = false; if (countdownTimer) clearInterval(countdownTimer);
+            document.getElementById('modalWaiting').style.display = 'none';
+            document.getElementById('modalCode').style.display = 'block';
+            document.getElementById('modalCodeDisplay').textContent = d.code;
+            document.getElementById('modalSMSContent').textContent = d.sms || '(无短信内容)';
+            document.getElementById('modalReleaseBtn').textContent = '✅ 已收到';
+            document.getElementById('modalReleaseBtn').disabled = true;
+            document.getElementById('modalReleaseBtn').style.opacity = '0.5';
+            document.getElementById('modalReleaseBtn').style.cursor = 'default';
             loadBalance();
             return;
         }
         if (d.msg && (d.msg.includes('余额不足') || d.msg.includes('失败'))) {
             polling = false; clearInterval(countdownTimer);
-            document.getElementById('waitingArea').style.display = 'none';
-            document.getElementById('errorArea').style.display = 'block';
-            document.getElementById('errorArea').textContent = '❌ ' + d.msg;
+            document.getElementById('modalWaiting').style.display = 'none';
+            document.getElementById('modalError').style.display = 'block';
+            document.getElementById('modalError').textContent = '❌ ' + d.msg;
             return;
         }
     } catch(e) {}
@@ -208,26 +338,18 @@ async function releasePhone() {
     const d = await r.json();
     if (d.ok) {
         polling = false; if (countdownTimer) clearInterval(countdownTimer);
-        document.getElementById('releaseBtn').textContent = '✅ 已释放';
-        document.getElementById('releaseBtn').disabled = true;
-        document.getElementById('releaseBtn').style.opacity = '0.5';
-        document.getElementById('releaseBtn').style.cursor = 'default';
-        document.getElementById('waitingArea').style.display = 'none';
-        document.getElementById('errorArea').style.display = 'block';
-        document.getElementById('errorArea').textContent = '⏹ 号码已释放';
+        document.getElementById('modalReleaseBtn').textContent = '✅ 已释放';
+        document.getElementById('modalReleaseBtn').disabled = true;
+        document.getElementById('modalReleaseBtn').style.opacity = '0.5';
+        document.getElementById('modalReleaseBtn').style.cursor = 'default';
+        document.getElementById('modalWaiting').style.display = 'none';
+        document.getElementById('modalError').style.display = 'block';
+        document.getElementById('modalError').textContent = '⏹ 号码已释放';
         loadBalance();
     }
 }
 
-function backToHome() {
-    polling = false; if (countdownTimer) clearInterval(countdownTimer);
-    currentViewToken = null;
-    document.getElementById('stepSMS').style.display = 'none';
-    document.getElementById('stepRedeem').style.display = 'block';
-    loadBalance();
-}
-
 loadBalance();
+loadTodayCount();
 </script>
-<style>@keyframes spin{to{transform:rotate(360deg)}}@keyframes codePulse{0%{opacity:0;transform:scale(0.5)}50%{opacity:1;transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}</style>
 {% endblock %}
