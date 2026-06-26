@@ -62,8 +62,8 @@ def add_channel():
     db = get_db()
     try:
         cl = int(request.form.get('concurrent_limit', 5))
-    db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit) VALUES (?,?,?,?,?,?)",
-                   (name, api_url, api_user, api_pass, markup_percent, cl))
+        db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit) VALUES (?,?,?,?,?,?)",
+                       (name, api_url, api_user, api_pass, markup_percent, cl))
         db.commit()
     except Exception as e:
         db.close()
