@@ -74,27 +74,39 @@ def add_channel():
 @admin_bp.route('/channels/<int:id>/test-login', methods=['POST'])
 @login_required
 def test_channel_login(id):
-    from channels.haozhuma import HaoZhuMa
+    from channels.factory import create_channel_adapter
     db = get_db()
     ch = db.execute("SELECT * FROM channels WHERE id=?", (id,)).fetchone()
     db.close()
     if not ch:
         return jsonify({'ok': False, 'msg': '渠道不存在'})
-    hzm = HaoZhuMa(ch['id'], ch['name'], {
-        'api_url': ch['api_url'],
-        'api_user': ch['api_user'] or '',
-        'api_pass': ch['api_pass'] or '',
-        'token': ch['token'] or '',
-    })
-    data = hzm.login()
-    code = data.get('code')
-    if code == 0 or code == '0':
-        db2 = get_db()
-        db2.execute("UPDATE channels SET token=? WHERE id=?", (data['token'], id))
-        db2.commit()
-        db2.close()
-        return jsonify({'ok': True, 'msg': '登录成功', 'token': data['token']})
-    return jsonify({'ok': False, 'msg': '登录失败: ' + data.get('msg', '')})
+    adapter = create_channel_adapter(ch)
+    if adapter is None:
+        return jsonify({'ok': False, 'msg': '不支持的渠道类型'})
+
+    channel_type = (ch.get('channel_type') or '').lower()
+    is_herosms = channel_type == 'herosms' or 'herosms' in (ch.get('name') or '').lower()
+
+    if is_herosms:
+        ok = adapter.ping()
+        if ok:
+            db2 = get_db()
+            db2.execute("UPDATE channels SET token=? WHERE id=?", (adapter._api_key, id))
+            db2.commit()
+            db2.close()
+            return jsonify({'ok': True, 'msg': '连接成功，API Key 有效'})
+        else:
+            return jsonify({'ok': False, 'msg': '连接失败，请检查 API Key 和 API 地址'})
+    else:
+        data = adapter.login()
+        code = data.get('code')
+        if code == 0 or code == '0':
+            db2 = get_db()
+            db2.execute("UPDATE channels SET token=? WHERE id=?", (data['token'], id))
+            db2.commit()
+            db2.close()
+            return jsonify({'ok': True, 'msg': '登录成功', 'token': data['token']})
+        return jsonify({'ok': False, 'msg': '登录失败: ' + data.get('msg', '')})
 
 @admin_bp.route('/channels/<int:id>/edit', methods=['POST'])
 @login_required
@@ -163,17 +175,13 @@ def channel_balances():
                 continue
             except:
                 pass
-        # 没有活实例，直接构造一次性获取
+        # 没有活实例，通过工厂创建一次性实例
         try:
-            from channels.haozhuma import HaoZhuMa
-            hzm = HaoZhuMa(r['id'], r['name'], {
-                'api_url': r['api_url'],
-                'api_user': r['api_user'] or '',
-                'api_pass': r['api_pass'] or '',
-                'token': r['token'] or '',
-            })
-            bal = hzm.get_balance()
-            result.append({'id': r['id'], 'name': r['name'], 'balance': bal})
+            from channels.factory import create_channel_adapter
+            adp = create_channel_adapter(r)
+            if adp:
+                bal = adp.get_balance()
+                result.append({'id': r['id'], 'name': r['name'], 'balance': bal})
         except Exception as e:
             result.append({'id': r['id'], 'name': r['name'], 'balance': 0})
     return jsonify({'ok': True, 'balances': result})
@@ -374,13 +382,37 @@ def users():
 @login_required
 def settings():
     if request.method == 'POST':
+        action = request.form.get('action')
+        db = get_db()
+
+        if action == 'smtp':
+            keys = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from_name']
+            for k in keys:
+                v = request.form.get(k, '').strip()
+                db.execute(
+                    "INSERT INTO site_config (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=?",
+                    (k, v, v))
+            db.commit()
+            db.close()
+            return jsonify({'ok': True, 'msg': 'SMTP 配置已保存'})
+
+        elif action == 'test_email':
+            from lib.email import send_email
+            test_to = request.form.get('test_to', '').strip()
+            if not test_to:
+                db.close()
+                return jsonify({'ok': False, 'msg': '请输入收件邮箱'})
+            ok, msg = send_email(test_to, '【云枢智联】测试邮件', '<h2>测试成功</h2><p>SMTP 配置正确，邮件发送功能正常。</p>')
+            db.close()
+            return jsonify({'ok': ok, 'msg': msg})
+
         new_pass = request.form.get('new_password')
         if new_pass:
-            db = get_db()
             db.execute("UPDATE admins SET password=? WHERE username=?",
                        (generate_password_hash(new_pass), flask_session['admin_username']))
             db.commit()
             db.close()
             return jsonify({'ok': True, 'msg': '密码已修改'})
+        db.close()
         return jsonify({'ok': False, 'msg': '请输入新密码'})
     return render_template('admin/settings.html')

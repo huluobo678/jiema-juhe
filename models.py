@@ -42,6 +42,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE sms_sessions ADD COLUMN activation_id TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE projects ADD COLUMN base_price REAL DEFAULT 0")
     except Exception:
         pass
@@ -98,7 +102,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,                   -- 项目名称 eg. 淘宝注册
             channel_id INTEGER REFERENCES channels(id),
-            sid INTEGER NOT NULL,                 -- 豪猪的项目ID
+            sid TEXT NOT NULL,                    -- 项目ID/服务代码（豪猪=数字ID，HeroSMS=tg/go等）
             price REAL NOT NULL DEFAULT 1.0,       -- 每码价格(元)
             description TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
@@ -159,6 +163,12 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL
+        );
+
+        -- 站点配置
+        CREATE TABLE IF NOT EXISTS site_config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
         );
 
         -- 公告

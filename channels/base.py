@@ -27,12 +27,12 @@ class ChannelBase(ABC):
         pass
     
     @abstractmethod
-    def get_message(self, project_sid, phone) -> dict:
+    def get_message(self, project_sid, phone, activation_id: str | None = None) -> dict:
         """获取短信/验证码"""
         pass
     
     @abstractmethod
-    def add_blacklist(self, project_sid, phone) -> bool:
+    def add_blacklist(self, project_sid, phone, activation_id: str | None = None) -> bool:
         """释放/拉黑号码"""
         pass
     

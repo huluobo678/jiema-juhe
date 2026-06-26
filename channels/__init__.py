@@ -28,13 +28,18 @@ def init_channels(db):
         }
         
         adapter = None
-        if 'haozhuma' in name or 'hz' in name or '豪猪' in name:
+        channel_type = (row.get('channel_type') or '').lower()
+
+        if 'haozhuma' in name or 'hz' in name or '豪猪' in name or channel_type == 'haozhuma':
             from .haozhuma import HaoZhuMa
             adapter = HaoZhuMa(row['id'], row['name'], config)
+        elif 'herosms' in name or channel_type == 'herosms':
+            from .herosms import HeroSMS
+            adapter = HeroSMS(row['id'], row['name'], config)
         # 未来其他渠道可以在这里加 elif
-        # elif 'backup' in name or '备用' in name:
-        #     from .backup import BackupChannel
-        #     adapter = BackupChannel(row['id'], row['name'], config)
+        # elif 'other' in name or channel_type == 'mychannel':
+        #     from .mychannel import MyChannel
+        #     adapter = MyChannel(row['id'], row['name'], config)
         
         if adapter:
             # 首次登录

@@ -67,7 +67,7 @@ class HaoZhuMa(ChannelBase):
         self.circuit.record(self._is_ok(data))
         return data
 
-    def get_message(self, project_sid, phone) -> dict:
+    def get_message(self, project_sid, phone, activation_id=None) -> dict:
         if not self._token:
             self.login()
         data = self._req(self.API_PATHS['getMessage'], {
@@ -76,7 +76,7 @@ class HaoZhuMa(ChannelBase):
         self.circuit.record(self._is_ok(data))
         return data
 
-    def add_blacklist(self, project_sid, phone) -> bool:
+    def add_blacklist(self, project_sid, phone, activation_id=None) -> bool:
         if not self._token:
             self.login()
         data = self._req(self.API_PATHS['addBlacklist'], {

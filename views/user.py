@@ -232,14 +232,15 @@ def start_order():
     channel_id = ch.channel_id
 
     phone = phone_data['phone']
+    activation_id = phone_data.get('activation_id', '')
     view_token = uuid.uuid4().hex
 
     # 绑定粘性会话
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, view_token, status, cost)
-                  VALUES (?,?,?,?,?, 'waiting', ?)""",
-              (account_token, project_id, channel_id, phone, view_token, total_price))
+    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, status, cost)
+                  VALUES (?,?,?,?,?,?, 'waiting', ?)""",
+              (account_token, project_id, channel_id, phone, activation_id, view_token, total_price))
     db.commit()
     db.close()
 
@@ -268,18 +269,14 @@ def api_sms(view_token):
     # 从注册中心获取渠道实例（避免重复实例化）
     ch = get_channel_registry().get(s['channel_id'])
     if ch is None:
-        # 回退：直接构造
+        # 回退：通过工厂创建
         channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
         project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
         db.close()
         if not channel or not project:
             return jsonify({'ok': False, 'msg': '渠道信息丢失'})
-        from channels.haozhuma import HaoZhuMa
-        ch = HaoZhuMa(channel['id'], channel['name'], {
-            'api_url': channel['api_url'], 'api_user': channel['api_user'] or '',
-            'api_pass': channel['api_pass'] or '', 'token': channel['token'] or '',
-        })
-        # 没注册到调度器可以先用
+        from channels.factory import create_channel_adapter
+        ch = create_channel_adapter(channel)
     else:
         project = db.execute("SELECT * FROM projects WHERE id=?", (s['project_id'],)).fetchone()
         channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
@@ -287,7 +284,9 @@ def api_sms(view_token):
         if not project:
             return jsonify({'ok': False, 'msg': '项目不存在'})
 
-    data = ch.get_message(project['sid'], s['phone'])
+    # 传递 activation_id（HeroSMS 等渠道需要）
+    aid = s.get('activation_id') or ''
+    data = ch.get_message(project['sid'], s['phone'], activation_id=aid)
     ch.release()  # 释放并发槽位
 
     if data.get('code') == 0 or data.get('code') == '0':
@@ -317,6 +316,7 @@ def release_phone():
     view_token = request.json.get('view_token')
     if not view_token:
         return jsonify({'ok': False, 'msg': '参数错误'})
+    account_token = request.cookies.get('account_token')
 
     db = get_db()
     s = db.execute("SELECT * FROM sms_sessions WHERE view_token=?", (view_token,)).fetchone()
@@ -339,15 +339,13 @@ def release_phone():
     if ch is None:
         channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
         if channel:
-            from channels.haozhuma import HaoZhuMa
-            ch = HaoZhuMa(channel['id'], channel['name'], {
-                'api_url': channel['api_url'], 'api_user': channel['api_user'] or '',
-                'api_pass': channel['api_pass'] or '', 'token': channel['token'] or '',
-            })
+            from channels.factory import create_channel_adapter
+            ch = create_channel_adapter(channel)
 
     if s['status'] == 'waiting' and ch:
         try:
-            ch.add_blacklist(project['sid'], s['phone'])
+            aid = s.get('activation_id') or ''
+            ch.add_blacklist(project['sid'], s['phone'], activation_id=aid)
         except:
             pass
 
