@@ -393,8 +393,6 @@ def register():
             return jsonify({'ok': False, 'msg': '仅支持 QQ 邮箱（@qq.com）'})
         code = request.form.get('code', '').strip()
         account_token = request.cookies.get('account_token')
-        if not account_token:
-            return jsonify({'ok': False, 'msg': '请先兑换卡密'})
 
         db = get_db()
         now = __import__('time').time()
@@ -415,14 +413,34 @@ def register():
             db.close()
             return jsonify({'ok': False, 'msg': '验证码错误'})
 
-        # 标记已使用
+        # 标记验证码已使用
         db.execute("UPDATE verify_codes SET used=1 WHERE id=?", (row['id'],))
-        # 清理旧验证码
         db.execute("DELETE FROM verify_codes WHERE email=? AND id!=?", (email, row['id']))
-        db.execute("UPDATE accounts SET email=?, email_verified=1 WHERE token=?", (email, account_token))
+
+        # 检查该邮箱是否已绑定其他账户
+        existing = db.execute("SELECT id FROM accounts WHERE email=? AND email_verified=1", (email,)).fetchone()
+        if existing:
+            db.close()
+            return jsonify({'ok': False, 'msg': '该邮箱已绑定其他账户'})
+
+        if account_token:
+            # 已有账户 → 绑定邮箱
+            acc = db.execute("SELECT id FROM accounts WHERE token=?", (account_token,)).fetchone()
+            if not acc:
+                db.execute("INSERT INTO accounts (token, email, email_verified) VALUES (?,?,1)", (account_token, email))
+            else:
+                db.execute("UPDATE accounts SET email=?, email_verified=1 WHERE token=?", (email, account_token))
+        else:
+            # 没有 account_token → 创建新账户
+            account_token = uuid.uuid4().hex
+            db.execute("INSERT INTO accounts (token, email, email_verified) VALUES (?,?,1)", (account_token, email))
+
         db.commit()
         db.close()
-        return jsonify({'ok': True, 'msg': '邮箱绑定成功'})
+
+        resp = jsonify({'ok': True, 'msg': '邮箱绑定成功', 'account_token': account_token})
+        resp.set_cookie('account_token', account_token, max_age=30*24*3600)
+        return resp
 
     return render_template('user/register.html')
 

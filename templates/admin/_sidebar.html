@@ -14,3 +14,19 @@
     <hr>
     <a href="/admin/logout" class="text-danger"><span>🚪</span> 退出</a>
 </div>
+<script>
+// 高亮当前菜单
+document.addEventListener('DOMContentLoaded', function() {
+    var path = window.location.pathname;
+    document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
+        var href = a.getAttribute('href');
+        if (href && (path === href || (path.startsWith(href) && href !== '/admin/' && href !== '/'))) {
+            a.classList.add('active');
+        }
+        // 精确匹配首页
+        if (href === '/admin/' && path === '/admin/') {
+            a.classList.add('active');
+        }
+    });
+});
+</script>

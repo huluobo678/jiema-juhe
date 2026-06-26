@@ -94,7 +94,7 @@ async function loadStats() {
 
 async function loadChannelStatus() {
     try {
-        const r = await fetch('/channels/status');
+        const r = await fetch('/admin/channels/status');
         const d = await r.json();
         const tbody = document.getElementById('channelStatusBody');
         if (!d.ok || !d.channels || d.channels.length === 0) {

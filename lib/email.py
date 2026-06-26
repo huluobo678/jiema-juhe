@@ -4,13 +4,22 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 from models import get_db
+import os
 
 def _get_config(key, default=''):
     db = get_db()
     db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
     row = db.execute("SELECT value FROM site_config WHERE key=?", (key,)).fetchone()
     db.close()
-    return row['value'] if row and row['value'] else default
+    if row and row['value']:
+        return row['value']
+    # fallback: 环境变量
+    env_key = 'SMTP_' + key[5:].upper()  # smtp_host -> SMTP_HOST
+    if env_key == 'SMTP_PASS':
+        return os.environ.get('SMTP_PASS', default)
+    if env_key == 'SMTP_USER':
+        return os.environ.get('SMTP_USER', default)
+    return default
 
 def send_email(to_address, subject, html_body):
     host = _get_config('smtp_host', 'smtpdm.aliyun.com')

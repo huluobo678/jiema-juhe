@@ -152,6 +152,7 @@ function refreshBalance() {
 // 高亮当前菜单 + 展开子菜单
 document.addEventListener('DOMContentLoaded', function() {
     var path = window.location.pathname;
+    // 匹配 <a> 标签
     document.querySelectorAll('.sidebar a').forEach(function(a) {
         var href = a.getAttribute('href');
         if (href && (path===href || (path==='/' && href==='/'))) {
@@ -163,6 +164,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (prev && prev.querySelector('.nav-arrow')) {
                     prev.querySelector('.nav-arrow').classList.add('open');
                 }
+            }
+        }
+    });
+    // 匹配 .nav-item div（不含 onclick 打开外部链接的）
+    document.querySelectorAll('.sidebar .nav-item').forEach(function(el) {
+        var onclick = el.getAttribute('onclick') || '';
+        var match = onclick.match(/window\.location\.href='([^']+)'/);
+        if (match) {
+            var target = match[1];
+            if (path === target || (path==='/' && target==='/')) {
+                el.classList.add('active');
             }
         }
     });
