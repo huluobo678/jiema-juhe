@@ -67,6 +67,15 @@ class HaoZhuMa(ChannelBase):
         self.circuit.record(self._is_ok(data))
         return data
 
+    def get_phone_by_number(self, project_sid, phone) -> dict:
+        """指定号码取号"""
+        if not self._token:
+            self.login()
+        params = {'token': self._token, 'sid': project_sid, 'phone': phone}
+        data = self._req(self.API_PATHS['getPhone'], params)
+        self.circuit.record(self._is_ok(data))
+        return data
+
     def get_message(self, project_sid, phone, activation_id=None) -> dict:
         if not self._token:
             self.login()

@@ -23,8 +23,16 @@ class ChannelBase(ABC):
     
     @abstractmethod
     def get_phone(self, project_sid) -> dict:
-        """获取号码"""
+        """获取号码（随机分配）"""
         pass
+    
+    def get_phone_by_number(self, project_sid: str, phone: str) -> dict:
+        """
+        指定号码取号。
+        基类默认不支持，子类可覆盖。
+        返回格式同 get_phone。
+        """
+        return {'code': -1, 'msg': '该渠道不支持指定号码取号'}
     
     @abstractmethod
     def get_message(self, project_sid, phone, activation_id: str | None = None) -> dict:

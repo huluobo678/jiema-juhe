@@ -152,6 +152,28 @@
     <p>选择项目 → 获取验证码</p>
 </div>
 
+<!-- ===== 指定号码取号 ===== -->
+<div class="s2-card" id="manualPhoneCard">
+    <h3>📞 指定号码取号</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <select id="manualProjectSelect" style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.9rem;min-width:180px">
+            <option value="">选择项目...</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}">{{ p.name }} ({{ p.price }}元)</option>
+            {% endfor %}
+        </select>
+        <input id="manualPhoneInput" type="tel" placeholder="输入号码..." 
+               style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.9rem;min-width:200px;font-family:'Courier New',monospace">
+        <button onclick="startOrderByNumber()" 
+                style="padding:8px 20px;background:#059669;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">
+            获取
+        </button>
+    </div>
+    <p style="font-size:0.75rem;color:#94a3b8;margin:8px 0 0">
+        输入你想指定的号码，直接从对应项目的上游取号。号码必须是渠道可用的。
+    </p>
+</div>
+
 <!-- ===== 当前收码面板（内嵌，不消失） ===== -->
 <div id="currentSession">
   <div class="cs-project" id="csProjectName">项目</div>
@@ -269,6 +291,41 @@ function filterProjects(category, el) {
 }
 
 // ============ 余额 / 今日 / 最近 ============
+
+// ============ 指定号码取号 ============
+async function startOrderByNumber() {
+    var pid = document.getElementById('manualProjectSelect').value;
+    var phone = document.getElementById('manualPhoneInput').value.trim();
+    if (!pid) { showToast('请选择项目', 'error'); return; }
+    if (!phone) { showToast('请输入号码', 'error'); return; }
+    if (phone.length < 5) { showToast('号码格式不正确', 'error'); return; }
+    var pname = document.getElementById('manualProjectSelect').selectedOptions[0].text;
+    try {
+        var r = await fetch('/start-order-by-number', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({project_id:parseInt(pid), phone:phone})});
+        var d = await r.json();
+        if (!d.ok) { showToast('❌ '+d.msg, 'error'); return; }
+        currentVT = d.view_token;
+        document.getElementById('csProjectName').textContent = pname;
+        document.getElementById('csPhone').textContent = d.phone;
+        document.getElementById('csCodeSection').style.display = 'none';
+        document.getElementById('csStateLabel').textContent = '⏳ 指定号码取号中...';
+        document.getElementById('csStateLabel').style.color = '';
+        document.getElementById('currentSession').style.display = 'block';
+        csStartTime = Date.now();
+        secondsLeft = 200;
+        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, startedAt:Date.now()}));
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(updateTimer, 1000);
+        document.getElementById('csTimer').textContent = '⏱ 200秒';
+        document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.add('disabled'); });
+        if (polling) return;
+        polling = true;
+        pollSms();
+    } catch(e) {
+        showToast('❌ 请求失败', 'error');
+    }
+}
+
 async function loadToday() {
     try { var r = await fetch('/today-count'); var d = await r.json();
         var el = document.querySelector('#todayCount'); if (el) el.textContent = d.count || 0;
