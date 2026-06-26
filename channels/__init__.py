@@ -28,7 +28,7 @@ def init_channels(db):
         }
         
         adapter = None
-        channel_type = (row.get('channel_type') or '').lower()
+        channel_type = (row['channel_type'] if 'channel_type' in row.keys() else '').lower()
 
         if 'haozhuma' in name or 'hz' in name or '豪猪' in name or channel_type == 'haozhuma':
             from .haozhuma import HaoZhuMa
