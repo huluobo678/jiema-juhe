@@ -105,7 +105,7 @@ class HeroSMS(ChannelBase):
 
     def get_phone(self, project_sid: str) -> dict:
         """
-        获取号码。
+        获取号码（随机分配）。
 
         project_sid 是 SMS-Activate 的 service 代码，如 tg/wa/go/al/ub 等。
 
@@ -113,13 +113,25 @@ class HeroSMS(ChannelBase):
             {'code': 0, 'phone': '...', 'activation_id': '...'}
             或 {'code': -1, 'msg': '...'}
         """
-        # HeroSMS 需要指定 country，默认 48=Netherlands（有最多号码量）
-        # 也可以通过渠道配置的 api_url 查询字符串覆盖
         country = self._get_country_param()
         params = {'action': 'getNumberV2', 'service': project_sid}
         if country:
             params['country'] = country
+        return self._do_get_phone(params)
 
+    def get_phone_by_number(self, project_sid: str, phone: str) -> dict:
+        """
+        指定号码取号。
+        HeroSMS 支持通过 getNumberV2 传入 phone 参数。
+        """
+        country = self._get_country_param()
+        params = {'action': 'getNumberV2', 'service': project_sid, 'phone': phone}
+        if country:
+            params['country'] = country
+        return self._do_get_phone(params)
+
+    def _do_get_phone(self, params: dict) -> dict:
+        """执行取号请求，解析响应"""
         text = self._req(params)
 
         # 1) 尝试 JSON 格式 (getNumberV2)

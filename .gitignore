@@ -1,9 +1,7 @@
+*.log
+sms.db-shm
+sms.db-wal
 __pycache__/
 *.pyc
-*.pyo
-sms.db
-*.db
-*.db-journal
-*.db-wal
-.env
-.vscode/
+_final_test.py
+_test_getphone.py

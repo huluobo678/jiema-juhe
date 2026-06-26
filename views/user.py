@@ -192,7 +192,6 @@ def start_order():
         return jsonify({'ok': False, 'msg': '参数错误'})
 
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
-    # 获取渠道加价率
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
     markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
     total_price = calculate_final_price(project['price'], base_price, markup)
@@ -228,14 +227,89 @@ def start_order():
         db.close()
         return jsonify({'ok': False, 'msg': msg})
 
-    # 收码成功后再扣款（在 api_sms 中）
     channel_id = ch.channel_id
-
     phone = phone_data['phone']
     activation_id = phone_data.get('activation_id', '')
     view_token = uuid.uuid4().hex
 
-    # 绑定粘性会话
+    smart_scheduler.set_sticky(view_token, channel_id)
+
+    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, status, cost)
+                  VALUES (?,?,?,?,?,?, 'waiting', ?)""",
+              (account_token, project_id, channel_id, phone, activation_id, view_token, total_price))
+    db.commit()
+    db.close()
+
+    return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'view_token': view_token})
+
+
+@user_bp.route('/start-order-by-number', methods=['POST'])
+def start_order_by_number():
+    """指定号码取号"""
+    data = request.json or {}
+    project_id = data.get('project_id')
+    phone_number = data.get('phone', '').strip()
+    account_token = request.cookies.get('account_token')
+
+    if not account_token:
+        return jsonify({'ok': False, 'msg': '请先兑换卡密'})
+    if not phone_number:
+        return jsonify({'ok': False, 'msg': '请输入号码'})
+
+    db = get_db()
+    acc = db.execute("SELECT * FROM accounts WHERE token=?", (account_token,)).fetchone()
+    project = db.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
+
+    if not acc or not project:
+        db.close()
+        return jsonify({'ok': False, 'msg': '参数错误'})
+
+    base_price = project['base_price'] if 'base_price' in project.keys() else 0
+    ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
+    markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
+    total_price = calculate_final_price(project['price'], base_price, markup)
+
+    if float(acc['balance']) < total_price:
+        db.close()
+        return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
+
+    # ====== 锁定到项目绑定的渠道 ======
+    ch = get_channel_registry().get(project['channel_id'])
+    if ch is None:
+        from channels.factory import create_channel_adapter
+        ch_row2 = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
+        if ch_row2:
+            ch = create_channel_adapter(ch_row2)
+            get_channel_registry().register(ch)
+    if ch is None:
+        db.close()
+        return jsonify({'ok': False, 'msg': '渠道不可用'})
+
+    if not ch.acquire():
+        db.close()
+        return jsonify({'ok': False, 'msg': '渠道繁忙，请稍后再试'})
+
+    try:
+        phone_data = ch.get_phone_by_number(project['sid'], phone_number)
+    except Exception as e:
+        ch.release()
+        db.close()
+        return jsonify({'ok': False, 'msg': f'指定号码取号失败: {e}'})
+
+    code_val = phone_data.get('code')
+    if code_val != 0 and code_val != '0':
+        ch.release()
+        msg = phone_data.get('msg', '指定号码不可用')
+        if '余额' in msg or '余额不足' in msg:
+            msg = '请充值'
+        db.close()
+        return jsonify({'ok': False, 'msg': msg})
+
+    channel_id = ch.channel_id
+    phone = phone_data['phone']
+    activation_id = phone_data.get('activation_id', '')
+    view_token = uuid.uuid4().hex
+
     smart_scheduler.set_sticky(view_token, channel_id)
 
     db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, status, cost)
