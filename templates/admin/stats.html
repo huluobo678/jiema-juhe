@@ -1,17 +1,9 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>统计</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="admin-layout">
-    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
-    <div class="main-content">
-        <h3>统计概览</h3>
+{% extends "admin/layout.html" %}
+{% block title %}统计{% endblock %}
+{% block content %}
+<h3>统计概览</h3>
         <p style="color:var(--text-muted);margin-bottom:24px">平台整体数据汇总</p>
+
 
         <div class="stat-grid">
             <div class="stat-card" style="border-left:4px solid var(--primary)">
@@ -48,8 +40,4 @@
             <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">暂无记录</td></tr>
             {% endfor %}
             </tbody>
-        </table>
-    </div>
-</div>
-</body>
-</html>
+        </table>{% endblock %}

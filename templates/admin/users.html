@@ -1,17 +1,9 @@
-﻿<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户管理</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="admin-layout">
-    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
-    <div class="main-content">
-        <h3>用户管理</h3>
+{% extends "admin/layout.html" %}
+{% block title %}用户管理{% endblock %}
+{% block content %}
+<h3>用户管理</h3>
         <p style="color:var(--text-muted);margin-bottom:16px">管理用户账号、余额</p>
+
 
         <form method="get" style="margin-bottom:20px">
             <div style="display:flex;gap:8px;max-width:400px">
@@ -39,8 +31,4 @@
             <tr><td colspan="7" style="text-align:center;color:#94a3b8">暂无用户</td></tr>
             {% endif %}
             </tbody>
-        </table>
-    </div>
-</div>
-</body>
-</html>
+        </table>{% endblock %}

@@ -1,17 +1,8 @@
-﻿<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - 概况</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="admin-layout">
-    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
-    <div class="main-content">
-        <h3>概况</h3>
-        <p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
+﻿{% extends "admin/layout.html" %}
+{% block title %}概况{% endblock %}
+{% block content %}
+<h3>概况</h3>
+<p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
 
         <div class="stat-grid">
             <div class="stat-card" style="border-left:4px solid var(--primary)">
@@ -74,7 +65,6 @@
         </div>
         <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
     </div>
-</div>
 
 <script>
 async function loadStats() {
@@ -170,5 +160,4 @@ loadBalances();
 setInterval(loadChannelStatus, 10000);
 setInterval(loadBalances, 30000);
 </script>
-</body>
-</html>
+{% endblock %}

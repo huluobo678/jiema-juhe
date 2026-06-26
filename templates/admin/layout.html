@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}管理后台{% endblock %} - 云枢智联</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+<div class="admin-layout">
+    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

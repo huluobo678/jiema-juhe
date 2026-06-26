@@ -1,17 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡密管理</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="admin-layout">
-    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
-    <div class="main-content">
-        <h3>卡密管理</h3>
-        <p style="color:var(--text-muted);margin-bottom:16px">批量生成和管理卡密</p>
+{% extends "admin/layout.html" %}
+{% block title %}卡密管理{% endblock %}
+{% block content %}
+<h3>卡密管理</h3>
+<p style="color:var(--text-muted);margin-bottom:16px">批量生成和管理卡密</p>
 
         <div class="card-generator">
             <h5 style="margin-bottom:16px">🎫 生成卡密</h5>
@@ -49,9 +40,8 @@
             {% endfor %}
             </tbody>
         </table>
-    </div>
 </div>
-
+{% block scripts %}
 <script>
 async function generateCards() {
     const count = document.getElementById('genCount').value;
@@ -76,5 +66,4 @@ function copyCodes() {
 }
 </script>
 <style>.d-none{display:none}</style>
-</body>
-</html>
+{% endblock %}

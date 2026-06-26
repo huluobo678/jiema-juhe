@@ -1,17 +1,12 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>项目管理</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="admin-layout">
-    <div class="sidebar">{% include 'admin/_sidebar.html' %}</div>
-    <div class="main-content">
-        <h3>项目管理</h3>
+{% extends "admin/layout.html" %}
+{% block title %}项目管理{% endblock %}
+{% block head %}
+<style>.mb-3{margin-bottom:16px}</style>
+{% endblock %}
+{% block content %}
+<h3>项目管理</h3>
         <p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道和项目ID。价格设为0则自动按渠道加价%计算</p>
+
 
         <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加项目</button>
 
@@ -67,9 +62,8 @@
             <button class="btn-modern btn-outline-modern" onclick="document.getElementById('projectModal').style.display='none'">取消</button>
             <button class="btn-modern btn-primary-modern" onclick="submitProject()">保存</button>
         </div>
-    </div>
-</div>
-
+    
+{% block scripts %}
 <script>
 function showAdd() {
     document.getElementById('modalTitle').textContent = '添加项目';
@@ -122,5 +116,4 @@ async function deleteProject(id) {
 }
 </script>
 <style>.mb-3{margin-bottom:16px}</style>
-</body>
-</html>
+{% endblock %}
