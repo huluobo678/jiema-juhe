@@ -194,6 +194,22 @@ class HeroSMS(ChannelBase):
 
         text = self._req(params)
 
+        # 尝试 JSON 格式解析
+        if text.startswith('{'):
+            try:
+                data = json.loads(text)
+                status = data.get('status', '')
+                code = data.get('code', '')
+                if status == 'STATUS_OK' or code:
+                    self.circuit.record(True)
+                    return {'code': 0, 'yzm': code, 'sms': data.get('sms', code)}
+                if status in ('STATUS_WAIT_CODE', 'STATUS_WAIT_RETRY', 'STATUS_ON_HOLD'):
+                    return {'code': -1, 'msg': '等待验证码中...', 'waiting': True}
+                if status == 'STATUS_CANCEL':
+                    return {'code': -1, 'msg': '已取消'}
+            except json.JSONDecodeError:
+                pass
+
         # STATUS_OK:code — 收到验证码
         if text.startswith('STATUS_OK:'):
             code = text.split(':', 1)[1].strip()

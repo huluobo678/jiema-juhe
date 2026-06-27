@@ -369,6 +369,19 @@ def api_sms(view_token):
     if data.get('code') == 0 or data.get('code') == '0':
         code = data.get('yzm', '')
         sms_content = data.get('sms', '')
+        
+        # 如果 yzm 是 0/空，尝试从 sms 文本提取验证码
+        if not code and sms_content:
+            import re
+            m = re.search(r'(\d{4,8})', sms_content)
+            if m:
+                code = m.group(1)
+        
+        if not code:
+            # 还没真正收到验证码（豪猪 code=0 只表示请求成功）
+            db2 = get_db()
+            db2.close()
+            return jsonify({'ok': False, 'msg': '等待验证码中...', 'waiting': True})
         db2 = get_db()
         # 收码时扣款（使用下单时锁定的价格）
         final_price = s['cost'] or 0

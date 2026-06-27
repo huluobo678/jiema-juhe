@@ -78,7 +78,7 @@ async function poll() {
     try {
         const r = await fetch('/api/sms/' + viewToken);
         const d = await r.json();
-        if (d.ok && d.code) {
+        if (d.ok && d.code !== undefined && d.code !== null) {
             document.getElementById('waiting').classList.add('d-none');
             document.getElementById('result').classList.remove('d-none');
             document.getElementById('codeDisplay').textContent = d.code;

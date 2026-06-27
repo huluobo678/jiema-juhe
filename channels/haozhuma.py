@@ -82,7 +82,15 @@ class HaoZhuMa(ChannelBase):
         data = self._req(self.API_PATHS['getMessage'], {
             'token': self._token, 'sid': project_sid, 'phone': phone
         })
-        self.circuit.record(self._is_ok(data))
+        ok = self._is_ok(data)
+        self.circuit.record(ok)
+        # 豪猪 code=0 表示请求成功，不是验证码已到
+        # 验证码在 yzm 字段，未到时 yzm=0（整数）
+        yzm = data.get('yzm', '') if isinstance(data.get('yzm'), str) else ''
+        if ok and yzm:
+            return {'code': 0, 'yzm': yzm, 'sms': data.get('sms', '')}
+        if yzm == '' and not isinstance(data.get('yzm'), str):
+            return {'code': -1, 'msg': '等待验证码中...', 'waiting': True}
         return data
 
     def add_blacklist(self, project_sid, phone, activation_id=None) -> bool:

@@ -84,8 +84,8 @@ def test_channel_login(id):
     if adapter is None:
         return jsonify({'ok': False, 'msg': '不支持的渠道类型'})
 
-    channel_type = (ch.get('channel_type') or '').lower()
-    is_herosms = channel_type == 'herosms' or 'herosms' in (ch.get('name') or '').lower()
+    channel_type = (ch['channel_type'] or '').lower()
+    is_herosms = channel_type == 'herosms' or 'herosms' in (ch['name'] or '').lower()
 
     if is_herosms:
         ok = adapter.ping()
