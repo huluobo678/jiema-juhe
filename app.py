@@ -28,10 +28,17 @@ def deploy_hook():
         if pw != SECRET_KEY[:16]:
             return 'unauthorized', 403
     try:
-        r = subprocess.run(['git', 'pull', 'origin', 'master'],
-                           capture_output=True, text=True, timeout=60,
-                           cwd=os.path.dirname(os.path.abspath(__file__)))
-        return f'<pre>{r.stdout}{r.stderr}</pre>'
+        r = subprocess.run(
+            ['git', 'fetch', 'origin', 'master'],
+            capture_output=True, text=True, timeout=30,
+            cwd=os.path.dirname(os.path.abspath(__file__)))
+        if r.returncode != 0:
+            return f'<pre>fetch失败: {r.stdout}{r.stderr}</pre>'
+        r2 = subprocess.run(
+            ['git', 'reset', '--hard', 'origin/master'],
+            capture_output=True, text=True, timeout=30,
+            cwd=os.path.dirname(os.path.abspath(__file__)))
+        return f'<pre>{r.stdout}{r2.stdout}{r2.stderr}</pre>'
     except Exception as e:
         return f'<pre>ERROR: {e}</pre>'
 
