@@ -18,10 +18,6 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
-        conn.execute("ALTER TABLE channels ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
-    except Exception:
-        pass
-    try:
         conn.execute("ALTER TABLE accounts ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
     except Exception:
         pass

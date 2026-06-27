@@ -1,71 +1,71 @@
-﻿{% extends "admin/layout.html" %}
+{% extends "admin/layout.html" %}
 {% block title %}概况{% endblock %}
 {% block content %}
-<h3>概况</h3>
-<p style="color:var(--text-muted);margin-bottom:24px">欢迎回来，{{ session.admin_username }}</p>
+<div class="page-header">
+    <h2>概况</h2>
+    <p>欢迎回来，{{ session.admin_username }}</p>
+</div>
 
-        <div class="stat-grid">
-            <div class="stat-card" style="border-left:4px solid var(--primary)">
-                <div class="label">渠道数</div>
-                <div class="value" style="color:var(--primary)" id="channelCount">-</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--success)">
-                <div class="label">项目数</div>
-                <div class="value" style="color:var(--success)" id="projectCount">-</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--warning)">
-                <div class="label">卡密总数</div>
-                <div class="value" style="color:var(--warning)" id="cardCount">-</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--danger)">
-                <div class="label">用户总数</div>
-                <div class="value" style="color:var(--danger)" id="userCount">-</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--primary-light)">
-                <div class="label">收码次数</div>
-                <div class="value" style="color:var(--primary-light)" id="sessionCount">-</div>
-            </div>
-        </div>
-
-        <!-- 上游余额面板 -->
-        <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
-            <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">💰 上游余额 <span id="balanceTime" style="font-size:0.75rem;color:#94a3b8;font-weight:400"></span></h3>
-            <div id="balanceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
-                <div style="text-align:center;color:#94a3b8;padding:20px">加载中...</div>
-            </div>
-        </div>
-
-        <!-- 渠道状态面板 -->
-        <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e2e8f0">
-            <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🔌 渠道状态</h3>
-            <table class="table-modern" style="width:100%">
-                <thead>
-                    <tr>
-                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">渠道</th>
-                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">状态</th>
-                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">熔断器</th>
-                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">并发</th>
-                        <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">最后健康</th>
-                    </tr>
-                </thead>
-                <tbody id="channelStatusBody">
-                    <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">加载中...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border);margin:32px 0">
-
-        <!-- 一键部署 -->
-        <h3>🚀 从 GitHub 部署</h3>
-        <p style="color:var(--text-muted);margin-bottom:16px">在 GitHub 上改完代码后，点击下面按钮自动拉取到服务器并重启</p>
-        <div style="display:flex;gap:12px;align-items:center">
-            <button onclick="deploy()" style="padding:10px 28px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">部署</button>
-            <span id="deployStatus" style="font-size:0.85rem;color:var(--text-muted)"></span>
-        </div>
-        <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
+<div class="stat-grid">
+    <div class="stat-card" style="border-left:4px solid var(--primary)">
+        <div class="label">渠道数</div>
+        <div class="value" style="color:var(--primary)" id="channelCount">-</div>
     </div>
+    <div class="stat-card" style="border-left:4px solid var(--success)">
+        <div class="label">项目数</div>
+        <div class="value" style="color:var(--success)" id="projectCount">-</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--warning)">
+        <div class="label">卡密总数</div>
+        <div class="value" style="color:var(--warning)" id="cardCount">-</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--danger)">
+        <div class="label">用户总数</div>
+        <div class="value" style="color:var(--danger)" id="userCount">-</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--primary-light)">
+        <div class="label">收码次数</div>
+        <div class="value" style="color:var(--primary-light)" id="sessionCount">-</div>
+    </div>
+</div>
 
+<div class="card-modern" style="padding:24px;margin-bottom:24px">
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">💰 上游余额 <span id="balanceTime" style="font-size:0.75rem;color:#94a3b8;font-weight:400"></span></h4>
+    <div id="balanceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+        <div style="text-align:center;color:#94a3b8;padding:20px">加载中...</div>
+    </div>
+</div>
+
+<div class="card-modern" style="padding:24px;margin-bottom:24px">
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🔌 渠道状态</h4>
+    <table class="table-modern" style="width:100%">
+        <thead>
+            <tr>
+                <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">渠道</th>
+                <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">状态</th>
+                <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">熔断器</th>
+                <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">并发</th>
+                <th style="background:#1e293b;color:white;padding:10px 14px;font-size:0.8rem">最后健康</th>
+            </tr>
+        </thead>
+        <tbody id="channelStatusBody">
+            <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">加载中...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card-modern" style="padding:24px">
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 8px">🚀 从 GitHub 部署</h4>
+    <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 16px">在 GitHub 上改完代码后，点击下面按钮自动拉取到服务器并重启</p>
+    <div style="display:flex;gap:12px;align-items:center">
+        <button onclick="deploy()" style="padding:10px 28px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">部署</button>
+        <span id="deployStatus" style="font-size:0.85rem;color:var(--text-muted)"></span>
+    </div>
+    <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
 async function loadStats() {
     const r = await fetch('/admin/stats?json=1');
@@ -77,11 +77,9 @@ async function loadStats() {
             document.getElementById('cardCount').textContent = d.cardCount;
             document.getElementById('sessionCount').textContent = d.sessionCount;
             document.getElementById('userCount').textContent = d.userCount;
-            document.getElementById('userCount').textContent = d.userCount;
         }
     } catch(e) {}
 }
-
 async function loadChannelStatus() {
     try {
         const r = await fetch('/admin/channels/status');
@@ -100,7 +98,7 @@ async function loadChannelStatus() {
             var concurrency = (ch.concurrent||0) + '/' + (ch.concurrent_limit||5);
             return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>' + (ch.name||ch.id) + '</strong></td>' +
                 '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+statusColor+'">'+statusIcon+' '+(ch.alive?'正常':'死亡')+'</td>' +
-                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+cbColor+';font-weight:'+(ch.circuit==='open'?700:400)+'">'+cbIcon+' '+cbLabel+'</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+cbColor+'">'+cbIcon+' '+cbLabel+'</td>' +
                 '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+concurrency+'</td>' +
                 '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+(ch.last_ping||'-')+'</td></tr>';
         }).join('');
@@ -108,7 +106,6 @@ async function loadChannelStatus() {
         document.getElementById('channelStatusBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px">加载失败</td></tr>';
     }
 }
-
 async function loadBalances() {
     try {
         const r = await fetch('/admin/channel-balances');
@@ -129,35 +126,21 @@ async function loadBalances() {
         document.getElementById('balanceGrid').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px">加载失败</div>';
     }
 }
-
 async function deploy() {
     const btn = document.querySelector('button[onclick="deploy()"]');
     const status = document.getElementById('deployStatus');
     const output = document.getElementById('deployOutput');
-    btn.disabled = true;
-    btn.textContent = '部署中...';
-    status.textContent = '⏳ 正在拉取最新代码...';
+    btn.disabled = true; btn.textContent = '部署中...'; status.textContent = '⏳ 正在拉取...';
     output.style.display = 'block';
     try {
         const r = await fetch('/__deploy__');
-        const text = await r.text();
-        output.textContent = text;
+        output.textContent = await r.text();
         status.textContent = '✅ 部署完成！正在重启...';
         await fetch('/__restart__');
-    } catch(e) {
-        status.textContent = '❌ ' + e;
-    }
-    setTimeout(function() {
-        btn.disabled = false;
-        btn.textContent = '部署';
-        status.textContent = '✅ 请刷新页面确认效果';
-    }, 5000);
+    } catch(e) { status.textContent = '❌ ' + e; }
+    setTimeout(function() { btn.disabled = false; btn.textContent = '部署'; }, 5000);
 }
-
-loadStats();
-loadChannelStatus();
-loadBalances();
-setInterval(loadChannelStatus, 10000);
-setInterval(loadBalances, 30000);
+loadStats(); loadChannelStatus(); loadBalances();
+setInterval(loadChannelStatus, 10000); setInterval(loadBalances, 30000);
 </script>
 {% endblock %}

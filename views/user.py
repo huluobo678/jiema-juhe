@@ -1,5 +1,6 @@
 ﻿"""前台用户路由"""
-import uuid, random
+import uuid, random, time
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, jsonify, abort
 from models import get_db, calculate_final_price
 from config import SITE_URL
@@ -234,9 +235,10 @@ def start_order():
 
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, status, cost)
-                  VALUES (?,?,?,?,?,?, 'waiting', ?)""",
-              (account_token, project_id, channel_id, phone, activation_id, view_token, total_price))
+    expire_at = (datetime.utcnow() + timedelta(seconds=200)).strftime('%Y-%m-%d %H:%M:%S')
+    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, status, cost)
+                  VALUES (?,?,?,?,?,?,?, 'waiting', ?)""",
+              (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
     db.commit()
     db.close()
 
@@ -312,9 +314,10 @@ def start_order_by_number():
 
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, status, cost)
-                  VALUES (?,?,?,?,?,?, 'waiting', ?)""",
-              (account_token, project_id, channel_id, phone, activation_id, view_token, total_price))
+    expire_at = (datetime.utcnow() + timedelta(seconds=200)).strftime('%Y-%m-%d %H:%M:%S')
+    db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, status, cost)
+                  VALUES (?,?,?,?,?,?,?, 'waiting', ?)""",
+              (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
     db.commit()
     db.close()
 

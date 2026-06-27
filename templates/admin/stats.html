@@ -1,43 +1,47 @@
 {% extends "admin/layout.html" %}
 {% block title %}统计{% endblock %}
 {% block content %}
-<h3>统计概览</h3>
-        <p style="color:var(--text-muted);margin-bottom:24px">平台整体数据汇总</p>
+<div class="page-header">
+    <h2>统计概览</h2>
+    <p>平台整体数据汇总</p>
+</div>
 
+<div class="stat-grid">
+    <div class="stat-card" style="border-left:4px solid var(--primary)">
+        <div class="label">卡密总数</div>
+        <div class="value" style="color:var(--primary)">{{ total_cards }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--warning)">
+        <div class="label">已使用卡密</div>
+        <div class="value" style="color:var(--warning)">{{ used_cards }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--success)">
+        <div class="label">收码次数</div>
+        <div class="value" style="color:var(--success)">{{ total_sessions }}</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--primary-light)">
+        <div class="label">用户总余额</div>
+        <div class="value" style="color:var(--primary-light)">{{ total_balance }} 元</div>
+    </div>
+</div>
 
-        <div class="stat-grid">
-            <div class="stat-card" style="border-left:4px solid var(--primary)">
-                <div class="label">卡密总数</div>
-                <div class="value" style="color:var(--primary)">{{ total_cards }}</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--warning)">
-                <div class="label">已使用卡密</div>
-                <div class="value" style="color:var(--warning)">{{ used_cards }}</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--success)">
-                <div class="label">收码次数</div>
-                <div class="value" style="color:var(--success)">{{ total_sessions }}</div>
-            </div>
-            <div class="stat-card" style="border-left:4px solid var(--primary-light)">
-                <div class="label">用户总余额</div>
-                <div class="value" style="color:var(--primary-light)">{{ total_balance }} 元</div>
-            </div>
-        </div>
-
-        <h4 style="margin-bottom:16px">最近收码记录</h4>
-        <table class="table-modern">
-            <thead><tr><th>项目</th><th>号码</th><th>验证码</th><th>状态</th><th>时间</th></tr></thead>
-            <tbody>
-            {% for s in recent %}
-            <tr>
-                <td>{{ s.project_name }}</td>
-                <td><code>{{ s.phone }}</code></td>
-                <td>{{ s.code or '-' }}</td>
-                <td>{{ {'waiting':'⏳ 等待中','received':'✅ 已收到','released':'🔓 已释放','blacklisted':'⛔ 已拉黑'}.get(s.status, s.status) }}</td>
-                <td style="color:var(--text-muted);font-size:0.85rem">{{ s.created_at }}</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">暂无记录</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>{% endblock %}
+<div class="card-modern" style="padding:24px">
+    <h4 style="margin-bottom:16px">最近收码记录</h4>
+    <table class="table-modern">
+        <thead><tr><th>项目</th><th>号码</th><th>验证码</th><th>状态</th><th>时间</th></tr></thead>
+        <tbody>
+        {% for s in recent %}
+        <tr>
+            <td>{{ s.project_name }}</td>
+            <td><code>{{ s.phone }}</code></td>
+            <td>{{ s.code or '-' }}</td>
+            <td>{{ {'waiting':'⏳ 等待中','received':'✅ 已收到','released':'🔓 已释放','blacklisted':'⛔ 已拉黑'}.get(s.status, s.status) }}</td>
+            <td style="color:var(--text-muted);font-size:0.85rem">{{ s.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:32px">暂无记录</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

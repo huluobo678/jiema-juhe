@@ -38,6 +38,9 @@ def deploy_hook():
 @app.route('/__restart__')
 def restart_app():
     """Restart the app process (requires nohup/supervisor to respawn)."""
+    # 管理员 session 免密
+    if flask_session.get('admin_username'):
+        os._exit(0)
     pw = request.args.get('pw', '')
     if pw != SECRET_KEY[:16]:
         return 'unauthorized', 403

@@ -52,7 +52,8 @@
                 </div>
                 <div class="form-group">
                     <label>SMTP 登录密码</label>
-                    <input name="smtp_pass" id="smtp_pass" type="password" value="{{ config.get('smtp_pass', '') }}" placeholder="输入密码">
+                    <input name="smtp_pass" id="smtp_pass" type="password" placeholder="输入密码" autocomplete="off">
+                    <small style="color:#94a3b8;font-size:0.75rem">已配置的密码不会回显，留空则保留原值</small>
                 </div>
                 <div class="form-group">
                     <label>发件人名称 <small>(自定义)</small></label>
@@ -96,6 +97,8 @@
             </form>
         </div>
     
+{% endblock %}
+
 {% block scripts %}
 <script>
 async function saveSMTP() {

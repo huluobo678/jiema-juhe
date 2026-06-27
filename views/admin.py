@@ -282,10 +282,17 @@ def cards():
 def generate_cards():
     count = int(request.form.get('count', 1))
     credit = float(request.form.get('credit', 1.0))
+    prefix = request.form.get('prefix', 'HZ').upper().strip()[:8]
+    if not prefix:
+        prefix = 'HZ'
     db = get_db()
     codes = []
     for _ in range(count):
-        code = 'HZ-' + uuid.uuid4().hex[:12].upper()
+        # 生成格式: YSZL-XXXX-XXXX-XXXX（分组易读）
+        code = prefix + '-' + '-'.join([uuid.uuid4().hex[i*4:(i+1)*4].upper() for i in range(3)])
+        # 确保唯一性
+        while db.execute("SELECT id FROM cards WHERE code=?", (code,)).fetchone():
+            code = prefix + '-' + '-'.join([uuid.uuid4().hex[i*4:(i+1)*4].upper() for i in range(3)])
         codes.append(code)
         db.execute("INSERT INTO cards (code, credit) VALUES (?,?)", (code, credit))
     db.commit()
@@ -415,4 +422,10 @@ def settings():
             return jsonify({'ok': True, 'msg': '密码已修改'})
         db.close()
         return jsonify({'ok': False, 'msg': '请输入新密码'})
-    return render_template('admin/settings.html')
+    
+    # GET: 加载 site_config
+    db = get_db()
+    config_rows = db.execute("SELECT key, value FROM site_config").fetchall()
+    db.close()
+    site_config = {row['key']: row['value'] for row in config_rows}
+    return render_template('admin/settings.html', config=site_config)

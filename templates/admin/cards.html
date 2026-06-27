@@ -1,69 +1,79 @@
 {% extends "admin/layout.html" %}
 {% block title %}卡密管理{% endblock %}
 {% block content %}
-<h3>卡密管理</h3>
-<p style="color:var(--text-muted);margin-bottom:16px">批量生成和管理卡密</p>
-
-        <div class="card-generator">
-            <h5 style="margin-bottom:16px">🎫 生成卡密</h5>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
-                <div>
-                    <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:4px">数量</label>
-                    <input type="number" id="genCount" class="input-modern" value="1" min="1" max="1000" style="width:100px">
-                </div>
-                <div>
-                    <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:4px">面额(元)</label>
-                    <input type="number" id="genCredit" class="input-modern" value="10" step="0.5" style="width:120px">
-                </div>
-                <div>
-                    <button class="btn-modern btn-primary-modern" onclick="generateCards()">生成</button>
-                </div>
-            </div>
-
-            <div id="genResult" class="d-none" style="margin-top:16px">
-                <h6 style="margin-bottom:8px">已生成卡密：</h6>
-                <textarea class="code-list-area" id="codeList" rows="5" readonly></textarea>
-                <button class="btn-modern btn-outline-modern" style="margin-top:8px;padding:8px 20px;font-size:0.9rem" onclick="copyCodes()">📋 复制所有卡密</button>
-            </div>
-        </div>
-
-        <table class="table-modern">
-            <thead><tr><th>卡密</th><th>面额</th><th>状态</th><th>使用时间</th></tr></thead>
-            <tbody>
-            {% for c in cards %}
-            <tr>
-                <td><code>{{ c.code }}</code></td>
-                <td>{{ c.credit }} 元</td>
-                <td>{{ '✅ 已使用' if c.used else '🆕 未使用' }}</td>
-                <td>{{ c.used_at or '-' }}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<div class="page-header">
+    <h2>卡密管理</h2>
+    <p>批量生成和管理卡密</p>
 </div>
+
+<div class="card-modern" style="padding:24px;margin-bottom:24px">
+    <h4 style="margin-bottom:16px">🎫 生成卡密</h4>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+        <div>
+            <label style="font-size:0.85rem;color:#64748b;display:block;margin-bottom:4px">前缀</label>
+            <input type="text" id="genPrefix" class="input-modern" value="YSZL" maxlength="8" style="width:90px">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;color:#64748b;display:block;margin-bottom:4px">数量</label>
+            <input type="number" id="genCount" class="input-modern" value="1" min="1" max="1000" style="width:100px">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;color:#64748b;display:block;margin-bottom:4px">面额(元)</label>
+            <input type="number" id="genCredit" class="input-modern" value="10" step="0.5" style="width:120px">
+        </div>
+        <div>
+            <button class="btn-modern btn-primary-modern" onclick="generateCards()">生成</button>
+        </div>
+    </div>
+    <div id="genResult" style="display:none;margin-top:16px">
+        <h5 style="margin-bottom:8px;font-size:0.9rem">已生成卡密：</h5>
+        <textarea class="code-list-area" id="codeList" rows="5" readonly></textarea>
+        <button class="btn-modern btn-outline-modern" style="margin-top:8px;padding:8px 20px;font-size:0.9rem" onclick="copyCodes()">📋 复制所有卡密</button>
+    </div>
+</div>
+
+<table class="table-modern">
+    <thead><tr><th>卡密</th><th>面额</th><th>状态</th><th>使用时间</th></tr></thead>
+    <tbody>
+    {% for c in cards %}
+    <tr>
+        <td><code>{{ c.code }}</code></td>
+        <td>{{ c.credit }} 元</td>
+        <td>{{ '✅ 已使用' if c.used else '🆕 未使用' }}</td>
+        <td>{{ c.used_at or '-' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
 {% block scripts %}
 <script>
 async function generateCards() {
+    const prefix = document.getElementById('genPrefix').value || 'YSZL';
     const count = document.getElementById('genCount').value;
     const credit = document.getElementById('genCredit').value;
+    const btn = document.querySelector('[onclick="generateCards()"]');
+    btn.disabled = true; btn.textContent = '生成中...';
     const r = await fetch('/admin/cards/generate', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'count=' + count + '&credit=' + credit
+        body: 'prefix=' + encodeURIComponent(prefix) + '&count=' + count + '&credit=' + credit
     });
     const d = await r.json();
+    btn.disabled = false; btn.textContent = '生成';
     if (d.ok) {
-        document.getElementById('genResult').classList.remove('d-none');
+        const gr = document.getElementById('genResult');
+        gr.style.display = 'block';
         document.getElementById('codeList').value = d.codes.join('\n');
-    } else {
-        alert(d.msg);
-    }
+        // 自动刷新表格
+        setTimeout(function() { location.reload(); }, 500);
+    } else alert(d.msg);
 }
 function copyCodes() {
     const ta = document.getElementById('codeList');
     ta.select();
-    navigator.clipboard.writeText(ta.value).then(() => alert('已复制'));
+    navigator.clipboard.writeText(ta.value).then(() => alert('已复制' + ta.value.split('\n').length + ' 条卡密'));
 }
 </script>
-<style>.d-none{display:none}</style>
 {% endblock %}
