@@ -223,7 +223,7 @@ def add_project():
     db = get_db()
     try:
         db.execute("INSERT INTO projects (name, channel_id, sid, price, description, category, icon, color) VALUES (?,?,?,?,?,?,?,?)",
-                   (request.form['name'], request.form['channel_id'], int(request.form['sid']),
+                   (request.form['name'], request.form['channel_id'], request.form['sid'],
                     float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
         db.commit()
     except Exception as e:
@@ -239,7 +239,7 @@ def edit_project(id):
     try:
         db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, price=?, description=?, category=?, icon=?, color=?
                       WHERE id=?""",
-                   (request.form['name'], request.form['channel_id'], int(request.form['sid']),
+                   (request.form['name'], request.form['channel_id'], request.form['sid'],
                     float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
         db.commit()
     except Exception as e:
