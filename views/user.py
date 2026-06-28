@@ -6,6 +6,8 @@ from models import get_db, calculate_final_price
 from config import SITE_URL
 from lib.scheduler import scheduler as smart_scheduler
 from channels import get_registry as get_channel_registry
+import re
+from lib.phone_format import format_phone
 
 user_bp = Blueprint('user', __name__)
 
@@ -190,7 +192,7 @@ def start_order():
 
     if not acc or not project:
         db.close()
-        return jsonify({'ok': False, 'msg': '参数错误'})
+        return jsonify({'ok': False, 'msg': '项目不存在，请联系管理员'})
 
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
@@ -264,7 +266,7 @@ def start_order_by_number():
 
     if not acc or not project:
         db.close()
-        return jsonify({'ok': False, 'msg': '参数错误'})
+        return jsonify({'ok': False, 'msg': '项目不存在，请联系管理员'})
 
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
@@ -405,7 +407,7 @@ def release_phone():
     """释放/拉黑号码"""
     view_token = request.json.get('view_token')
     if not view_token:
-        return jsonify({'ok': False, 'msg': '参数错误'})
+        return jsonify({'ok': False, 'msg': '项目不存在，请联系管理员'})
     account_token = request.cookies.get('account_token')
 
     db = get_db()
