@@ -59,6 +59,7 @@ def add_channel():
     api_user = request.form.get('api_user', '')
     api_pass = request.form.get('api_pass', '')
     markup_percent = float(request.form.get('markup_percent', 0))
+    channel_type = request.form.get('channel_type', 'haozhuma')
     db = get_db()
     try:
         cl = int(request.form.get('concurrent_limit', 5))
