@@ -306,14 +306,14 @@ async function startOrderByNumber() {
         if (!d.ok) { showToast('❌ '+d.msg, 'error'); return; }
         currentVT = d.view_token;
         document.getElementById('csProjectName').textContent = pname;
-        document.getElementById('csPhone').textContent = d.phone;
+        document.getElementById('csPhone').textContent = d.formatted_phone || d.phone;
         document.getElementById('csCodeSection').style.display = 'none';
         document.getElementById('csStateLabel').textContent = '⏳ 指定号码取号中...';
         document.getElementById('csStateLabel').style.color = '';
         document.getElementById('currentSession').style.display = 'block';
         csStartTime = Date.now();
         secondsLeft = 200;
-        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, startedAt:Date.now()}));
+        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, formatted_phone:d.formatted_phone||d.phone, startedAt:Date.now()}));
         if (countdownTimer) clearInterval(countdownTimer);
         countdownTimer = setInterval(updateTimer, 1000);
         document.getElementById('csTimer').textContent = '⏱ 200秒';
@@ -352,7 +352,7 @@ async function startOrder(pid, pname) {
         // 显示收码面板
         currentVT = d.view_token;
         document.getElementById('csProjectName').textContent = pname;
-        document.getElementById('csPhone').textContent = d.phone;
+        document.getElementById('csPhone').textContent = d.formatted_phone || d.phone;
         document.getElementById('csCodeSection').style.display = 'none';
         document.getElementById('csStateLabel').textContent = '⏳ 等待验证码中...';
         document.getElementById('csStateLabel').style.color = '';
@@ -360,7 +360,7 @@ async function startOrder(pid, pname) {
         csStartTime = Date.now();
         secondsLeft = 200;
         // 保存到localStorage
-        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, startedAt:Date.now()}));
+        localStorage.setItem('sms_current_vt', JSON.stringify({view_token:d.view_token, project_name:pname, phone:d.phone, formatted_phone:d.formatted_phone||d.phone, startedAt:Date.now()}));
         // 开始倒计时
         if (countdownTimer) clearInterval(countdownTimer);
         countdownTimer = setInterval(updateTimer, 1000);
@@ -397,7 +397,7 @@ async function pollSms() {
                     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
                     polling = false;
                     playBeep();
-                    showToast('✅ 验证码: '+d.code+' 已成功获取！', 'success');
+                    showToast('✅ '+d.code+', 获取成功！', 'success');
                     localStorage.removeItem('sms_current_vt');
                     // 重新启用项目卡片
                     document.querySelectorAll('.s2-project').forEach(function(el){ el.classList.remove('disabled'); });

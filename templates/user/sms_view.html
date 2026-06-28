@@ -83,6 +83,9 @@ async function poll() {
             document.getElementById('result').classList.remove('d-none');
             document.getElementById('codeDisplay').textContent = d.code;
             var displayText = d.sms || '(无短信内容)';
+            // Update phone with format if available
+            var phoneEl = document.querySelector('.cs-phone') || document.getElementById('phoneDisplay');
+            if (phoneEl && d.formatted_phone) phoneEl.textContent = d.formatted_phone;
             if (d.channel_type === 'herosms' && displayText && !/[一-龥]/.test(displayText)) {
                 displayText = '[海外短信内容]\n' + displayText + '\n\n(海外平台短信为英文，属于正常情况)';
             }

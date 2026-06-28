@@ -242,7 +242,7 @@ def start_order():
     db.commit()
     db.close()
 
-    return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'view_token': view_token})
+    return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'formatted_phone': format_phone(phone, ch.name), 'view_token': view_token})
 
 
 @user_bp.route('/start-order-by-number', methods=['POST'])
@@ -321,7 +321,7 @@ def start_order_by_number():
     db.commit()
     db.close()
 
-    return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'view_token': view_token})
+    return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'formatted_phone': format_phone(phone, ch.name), 'view_token': view_token})
 
 # ========== 轮询短信 ==========
 
