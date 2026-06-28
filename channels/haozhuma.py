@@ -86,10 +86,11 @@ class HaoZhuMa(ChannelBase):
         self.circuit.record(ok)
         # 豪猪 code=0 表示请求成功，不是验证码已到
         # 验证码在 yzm 字段，未到时 yzm=0（整数）
-        yzm = data.get('yzm', '') if isinstance(data.get('yzm'), str) else ''
+        yzm_raw = data.get('yzm', 0)
+        yzm = str(yzm_raw) if yzm_raw else ''
         if ok and yzm:
             return {'code': 0, 'yzm': yzm, 'sms': data.get('sms', '')}
-        if yzm == '' and not isinstance(data.get('yzm'), str):
+        if not yzm:
             return {'code': -1, 'msg': '等待验证码中...', 'waiting': True}
         return data
 
