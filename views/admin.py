@@ -486,7 +486,7 @@ def hero_services():
     
     try:
         url = f"{api_url}?api_key={api_key}&action=getServices&country={country}"
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read().decode('utf-8')
             data = jmod.loads(raw)
