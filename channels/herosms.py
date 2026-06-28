@@ -81,7 +81,7 @@ class HeroSMS(ChannelBase):
         if country:
             return country
         # 默认：荷兰（号码池最大）
-        return '48'
+        return '16'
 
     def _parse_json_number(self, text: str) -> dict | None:
         """尝试解析 JSON 格式的 getNumberV2 响应"""
