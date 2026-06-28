@@ -674,10 +674,13 @@ def hero_services():
         services = []
         for sid, info in country_data.items():
             name = SERVICE_NAMES.get(sid, sid.upper())
+            cost_usd = float(info.get('cost', 0))
             services.append({
                 'sid': sid,
                 'name': name,
-                'price': info.get('cost', 0),
+                'price_usd': cost_usd,
+                'price_cny': round(cost_usd * exchange_rate, 2),
+                'price': cost_usd,
                 'stock': info.get('count', info.get('quantity', 0)),
             })
         

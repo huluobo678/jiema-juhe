@@ -43,6 +43,9 @@ tr:hover { background:#f8fafc; }
 
 <div class="search-box">
   <label>国家：</label>
+  <label>汇率：</label>
+  <input type="number" name="rate" step="0.01" value="{{ request.args.get('rate', 7.25) }}" onchange="this.form.submit()" style="width:80px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;outline:none;">
+  <label style="margin-left:8px;">国家：</label>
   <select name="country" onchange="this.form.submit()" id="countrySelect">
     <option value="16" {% if country=='16' %}selected{% endif %}>16 - 英格兰 (UK)</option>
     <option value="22" {% if country=='22' %}selected{% endif %}>22 - 美国 (USA)</option>
@@ -69,7 +72,7 @@ tr:hover { background:#f8fafc; }
 <tr>
   <th style="width:120px">SID (项目ID)</th>
   <th>名称</th>
-  <th style="width:100px">价格 ($)</th>
+  <th style="width:100px">价格 ($)</th><th style="width:100px">价格 (¥)</th>
   <th style="width:100px">库存</th>
 </tr>
 </thead>
@@ -78,7 +81,7 @@ tr:hover { background:#f8fafc; }
 <tr>
   <td><span class="sid-code">{{ s.sid }}</span><button class="copy-btn" onclick="navigator.clipboard.writeText('{{ s.sid }}')">复制</button></td>
   <td>{{ s.name }}</td>
-  <td class="price">{{ s.price }}</td>
+  <td class="price">${{ s.price_usd }}</td><td class="price">¥{{ s.price_cny }}</td>
   <td class="stock">{{ s.stock }}</td>
 </tr>
 {% endfor %}
