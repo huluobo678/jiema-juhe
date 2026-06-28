@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 _final_test.py
 _test_getphone.py
+
+.env
+__pycache__
+*.pyc
