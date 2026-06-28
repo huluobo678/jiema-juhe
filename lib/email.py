@@ -7,18 +7,18 @@ from models import get_db
 import os
 
 def _get_config(key, default=''):
+    env_map = {'smtp_host': 'SMTP_HOST', 'smtp_port': 'SMTP_PORT', 'smtp_user': 'SMTP_USER', 'smtp_pass': 'SMTP_PASS', 'smtp_from_name': 'SMTP_FROM_NAME'}
+    env_key = env_map.get(key)
+    if env_key:
+        val = os.environ.get(env_key)
+        if val:
+            return val
     db = get_db()
     db.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
     row = db.execute("SELECT value FROM site_config WHERE key=?", (key,)).fetchone()
     db.close()
     if row and row['value']:
         return row['value']
-    # fallback: 环境变量
-    env_key = 'SMTP_' + key[5:].upper()  # smtp_host -> SMTP_HOST
-    if env_key == 'SMTP_PASS':
-        return os.environ.get('SMTP_PASS', default)
-    if env_key == 'SMTP_USER':
-        return os.environ.get('SMTP_USER', default)
     return default
 
 def send_email(to_address, subject, html_body):
