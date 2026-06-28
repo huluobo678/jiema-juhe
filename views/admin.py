@@ -470,6 +470,169 @@ def hero_services():
     
     import urllib.request, json as jmod
     
+    db = get_db()
+    ch = db.execute("SELECT api_user, api_pass, api_url, token FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
+    db.close()
+    
+    if not ch:
+        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error='请先添加并启用一个 HeroSMS 渠道')
+    
+    api_key = ch['token'] or ch['api_user'] or ch['api_pass'] or ''
+    api_url = (ch['api_url'] or 'https://hero-sms.com/stubs/handler_api.php').rstrip('/')
+    
+    # Service name mapping (SMS-Activate common services)
+    SERVICE_NAMES = {
+        'ot': 'OpenAI / Telegram (通用)', 'tg': 'Telegram', 'wa': 'WhatsApp',
+        'go': 'Google / Gmail', 'fb': 'Facebook', 'tw': 'Twitter / X',
+        'ig': 'Instagram', 'li': 'LinkedIn', 'dc': 'Discord', 'ti': 'Tinder',
+        'am': 'Amazon', 'ub': 'Uber', 'av': 'Avito', 'ok': 'Odnoklassniki',
+        'vk': 'VKontakte', 'mb': 'Mail.ru', 'me': 'WeChat / 微信',
+        'sn': 'Snapchat', 'pi': 'Pinterest', 'tb': 'TikTok',
+        'zz': 'Zoom', 'mm': 'Microsoft / Outlook', 'al': 'Alibaba',
+        'ks': 'Kuaishou / 快手', 'jd': 'JD / 京东', 'ad': 'Apple ID',
+        'bt': 'Bittrex', 'cb': 'Coinbase', 'bn': 'Binance',
+        'hl': 'Huobi', 'okx': 'OKX', 'kf': 'KuCoin',
+        'gv': 'Google Voice', 'nt': 'Netflix', 'sp': 'Spotify',
+        'ym': 'Yandex', 'yu': 'Yahoo', 'mi': 'Microsoft (OLD)',
+        'wk': 'Weibo / 微博', 'db': 'DiDi / 滴滴', 'mt': 'Meituan / 美团',
+        'pd': 'Pinduoduo / 拼多多', 'wb': 'Weibo Business',
+        'wp': 'WhatsApp Business', 'vp': 'Viber', 'wf': 'Wire',
+        'ac': 'Airbnb', 'ae': 'Ae (应用)', 'ag': 'Agora',
+        'al': 'Alibaba', 'ap': 'Apple (其他)', 'as': 'Asobu',
+        'av': 'Avito', 'az': 'Aliexpress', 'ba': 'Badoo',
+        'bb': 'Bigo Live', 'bc': 'Bing / Clarity', 'bd': 'Like / Badoo',
+        'be': 'Bumble', 'bf': 'Bank of...', 'bg': 'BongaCams',
+        'bh': 'Badoo (其他)', 'bi': 'Bittrex', 'bj': 'Badoo (JP)',
+        'bk': 'Booking', 'bl': 'BLUELINE', 'bm': 'Bermuda',
+        'bn': 'Binance', 'bo': 'Bonga Cams', 'bp': 'Badoo Premium',
+        'bq': 'BitMEX', 'br': 'Bumble', 'bs': 'Badoo (服务)',
+        'bt': 'Bittrex', 'bu': 'Bumble (业务)', 'bv': 'BitVavo',
+        'bw': 'Badoo (网页)', 'bx': 'BitMEX', 'by': 'Bybit',
+        'bz': 'Business', 'ca': 'Cash App', 'cb': 'Coinbase',
+        'cc': 'CoinMarketCap', 'cd': 'Crypto.com', 'ce': 'CoinEx',
+        'cf': 'Cloudflare', 'cg': 'CoinGate', 'ch': 'Chatous',
+        'ci': 'Cisco / Webex', 'cj': 'CJ Affiliate', 'ck': 'CoinPayments',
+        'cl': 'CoinList', 'cm': 'Cameleo', 'cn': 'CoinNew',
+        'co': 'Coinsbit', 'cp': 'CoinPanel', 'cq': 'CQ9',
+        'cr': 'CrickWatch', 'cs': 'Cash Show', 'ct': 'CoinTracker',
+        'cu': 'CUDOS', 'cv': 'CoinView', 'cw': 'CoinW',
+        'cx': 'CoinX', 'cy': 'Coinzy', 'cz': 'Coinzone',
+        'da': 'Dating', 'db': 'DiDi / 滴滴', 'dc': 'Discord',
+        'dd': 'DDD', 'de': 'Dating / 约会', 'df': 'DeepForce',
+        'dg': 'DingTalk / 钉钉', 'dh': 'Discord / Hook', 'di': 'DingTalk',
+        'dj': 'DJI / 大疆', 'dk': 'Docker', 'dl': 'Dlive',
+        'dm': 'DMarket', 'dn': 'DingTalk (NEW)', 'do': 'DoorDash',
+        'dp': '滴滴 (乘客)', 'dq': 'DingTalk Q', 'dr': 'DoorDash',
+        'ds': 'DingTalk (服务)', 'dt': '滴滴 (司机)', 'du': 'DuckDuckGo',
+        'dv': 'DATING', 'dw': 'Dating Web', 'dx': 'DEX',
+        'dy': 'DYDX', 'dz': 'DingDing', 'ea': 'EA / Origin',
+        'eb': 'eBay', 'ec': 'eCourt', 'ed': 'Edmodo',
+        'ee': 'Evernote', 'ef': 'E-Food', 'eg': 'EGifter',
+        'eh': 'E-Hub', 'ei': 'Etsy', 'ej': 'E-Jay',
+        'ek': 'E-KYC', 'el': 'eLux', 'em': 'Email',
+        'en': 'Enjinstarter', 'eo': 'eOnline', 'ep': 'E-Pay',
+        'eq': 'Equinox', 'er': 'E-Reward', 'es': 'E-SIM',
+        'et': 'Ethereum', 'eu': 'EU / 欧洲', 'ev': 'Eventbrite',
+        'ew': 'E-Wallet', 'ex': 'Exchange', 'ey': 'Eyny',
+        'ez': 'Ezio', 'fa': 'Facebook', 'fb': 'Facebook',
+        'fc': 'FaceCall', 'fd': 'Foodpanda', 'fe': 'Fecebook (ENT)',
+        'ff': 'FaceBook', 'fg': 'F-Games', 'fh': 'Fidelity',
+        'fi': 'Fiverr', 'fj': 'FJONG', 'fk': 'FlokiK',
+        'fl': 'Flickr', 'fm': 'Famous', 'fn': 'Fandom',
+        'fo': 'Follower', 'fp': 'Facebook Pay', 'fq': 'Frequent',
+        'fr': 'Freelancer', 'fs': 'F-Secure', 'ft': 'FTMO',
+        'fu': 'FUBO', 'fv': 'Fiverr (VER)', 'fw': 'Fiverr (WEB)',
+        'fx': 'FX / 外汇', 'fy': 'Fyber', 'fz': 'FZ',
+        'ga': 'Game', 'gb': 'Grab', 'gc': 'Gcash',
+        'gd': 'Godaddy', 'ge': 'Get Taxi', 'gf': 'GoFundMe',
+        'gg': 'Google (Gmail)', 'gh': 'GitHub', 'gi': 'Gittigidiyor',
+        'gj': 'GJ', 'gk': 'Gokuk', 'gl': 'Glovo',
+        'gm': 'Gmail', 'gn': 'Genesis', 'go': 'Google',
+        'gp': 'Google Pay', 'gq': 'Google Q', 'gr': 'Grindr',
+        'gs': 'Google Play Store', 'gt': 'Gett', 'gu': 'Guru',
+        'gv': 'Google Voice', 'gw': 'Google W', 'gx': 'GX',
+        'gy': 'GoDaddy Y', 'gz': 'GZ', 'ha': 'Happy',
+        'hb': 'HBase', 'hc': 'HCL', 'hd': 'HDFC',
+        'he': 'Hello', 'hf': 'HighFive', 'hg': 'Hinge',
+        'hh': 'HH', 'hi': 'Hike', 'hj': 'H-J',
+        'hk': 'Huawei / 华为', 'hl': 'Huobi', 'hm': 'Home',
+        'hn': 'Huawei (NEW)', 'ho': 'Houzz', 'hp': 'Huawei Pay',
+        'hq': 'HQ', 'hr': 'Huawei (ROM)', 'hs': 'Huawei Store',
+        'ht': 'Huawei (Ticket)', 'hu': 'Huawei', 'hv': 'Huawei V',
+        'hw': 'Huawei Wallet', 'hx': 'HX', 'hy': 'HY',
+        'hz': 'HZ', 'ia': 'IA', 'ib': 'IB',
+        'ic': 'ICQ', 'id': 'ID', 'ie': 'IE',
+        'if': 'IF', 'ig': 'Instagram', 'ih': 'IH',
+        'ii': 'II', 'ij': 'IJ', 'ik': 'IK',
+        'il': 'IL', 'im': 'IMessage', 'in': 'Indeed',
+        'io': 'I/O', 'ip': 'IP', 'iq': 'IQ',
+        'ir': 'IR', 'is': 'IS', 'it': 'Itch.io',
+        'iu': 'IU', 'iv': 'IV', 'iw': 'IW',
+        'ix': 'IX', 'iy': 'IY', 'iz': 'IZ',
+        'ja': 'Jabra', 'jb': 'Jabber', 'jc': 'J-Coin',
+        'jd': 'JD / 京东', 'je': 'Jet', 'jf': 'J-Field',
+        'jg': 'J-Game', 'jh': 'J-HUB', 'ji': 'Jira',
+        'jj': 'JJ', 'jk': 'JK', 'jl': 'JL',
+        'jm': 'JM', 'jn': 'JN', 'jo': 'Joom',
+        'jp': 'JPay', 'jq': 'JQ', 'jr': 'JR',
+        'js': 'JS', 'jt': 'JT', 'ju': 'Jumo',
+        'jv': 'JV', 'jw': 'JW', 'jx': 'JX',
+        'jy': 'JY', 'jz': 'JZ', 'ka': 'Kaggle',
+        'kb': 'K-Bank', 'kc': 'KC', 'kd': 'KD',
+        'ke': 'Keek', 'kf': 'KuCoin', 'kg': 'KG',
+        'kh': 'KH', 'ki': 'Kick', 'kj': 'KJ',
+        'kk': 'KK', 'kl': 'KL', 'km': 'KM',
+        'kn': 'KN', 'ko': 'Koho', 'kp': 'KP',
+        'kq': 'KQ', 'kr': 'Kraken', 'ks': 'Kuaishou / 快手',
+        'kt': 'KT', 'ku': 'KU', 'kv': 'K-V',
+        'kw': 'KW', 'kx': 'KX', 'ky': 'KY',
+        'kz': 'KZ', 'la': 'Lazada', 'lb': 'LBank',
+        'lc': 'LC', 'ld': 'LD', 'le': 'Line',
+        'lf': 'L-F', 'lg': 'LG', 'lh': 'LH',
+        'li': 'LinkedIn', 'lj': 'LJ', 'lk': 'LK',
+        'll': 'LL', 'lm': 'LM', 'ln': 'LN',
+        'lo': 'LO', 'lp': 'LP', 'lq': 'LQ',
+        'lr': 'LR', 'ls': 'LS', 'lt': 'LT',
+        'lu': 'Lunch', 'lv': 'LV', 'lw': 'lWork',
+        'lx': 'LX', 'ly': 'LY', 'lz': 'LZ',
+    }
+    
+    try:
+        url = f"{api_url}?api_key={api_key}&action=getPrices&country={country}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode('utf-8')
+            data = jmod.loads(raw)
+        
+        # data format: {"16": {"baq": {"cost": 0.07, "count": 186796}, "ccu": {...}}, ...}
+        country_data = data.get(country, data.get(list(data.keys())[0], {}))
+        
+        services = []
+        for sid, info in country_data.items():
+            name = SERVICE_NAMES.get(sid, sid.upper())
+            services.append({
+                'sid': sid,
+                'name': name,
+                'price': info.get('cost', 0),
+                'stock': info.get('count', info.get('quantity', 0)),
+            })
+        
+        services.sort(key=lambda s: s['sid'])
+        
+        if search:
+            services = [s for s in services if search in s['sid'].lower() or search in s['name'].lower()]
+        
+        return render_template('admin/herosms_services.html', services=services, country=country, search=search, error=None)
+    except Exception as e:
+        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error=f'查询失败: {e}')
+
+def hero_services():
+    """HeroSMS 服务列表查询（后台）"""
+    country = request.args.get('country', '16')
+    search = request.args.get('search', '').strip().lower()
+    
+    import urllib.request, json as jmod
+    
     # 从渠道配置获取 API Key
     db = get_db()
     ch = db.execute("SELECT api_user, api_pass, api_url, token FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
