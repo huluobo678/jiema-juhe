@@ -472,13 +472,13 @@ def hero_services():
     
     # 从渠道配置获取 API Key
     db = get_db()
-    ch = db.execute("SELECT api_user, api_pass, api_url FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
+    ch = db.execute("SELECT api_user, api_pass, api_url, token FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
     db.close()
     
     if not ch:
         return render_template('admin/herosms_services.html', services=[], country=country, search=search, error='请先添加并启用一个 HeroSMS 渠道')
     
-    api_key = ch['api_user'] or ch['api_pass'] or ''
+    api_key = ch['token'] or ch['api_user'] or ch['api_pass'] or ''
     api_url = (ch['api_url'] or 'https://api.herosms.pro/stubs/handler_api.php').rstrip('/')
     
     if 'handler_api.php' not in api_url:
