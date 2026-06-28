@@ -459,3 +459,53 @@ def admin_unban():
         return jsonify({'ok': True, 'msg': 'unban done', 'jails': jails, 'banned_ips': banned_ips})
     except Exception as e:
         return jsonify({'ok': False, 'msg': f'unban failed: {e}'})
+
+
+@admin_bp.route('/herosms-services')
+@login_required
+def hero_services():
+    """HeroSMS 服务列表查询（后台）"""
+    country = request.args.get('country', '16')
+    search = request.args.get('search', '').strip().lower()
+    
+    import urllib.request, json as jmod
+    
+    # 从渠道配置获取 API Key
+    db = get_db()
+    ch = db.execute("SELECT api_user, api_pass, api_url FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
+    db.close()
+    
+    if not ch:
+        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error='请先添加并启用一个 HeroSMS 渠道')
+    
+    api_key = ch['api_user'] or ch['api_pass'] or ''
+    api_url = (ch['api_url'] or 'https://api.herosms.pro/stubs/handler_api.php').rstrip('/')
+    
+    if 'handler_api.php' not in api_url:
+        api_url = api_url.rstrip('/') + '/stubs/handler_api.php'
+    
+    try:
+        url = f"{api_url}?api_key={api_key}&action=getServices&country={country}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode('utf-8')
+            data = jmod.loads(raw)
+        
+        services = []
+        for sid, info in data.items():
+            services.append({
+                'sid': sid,
+                'name': info.get('name', info.get('service', sid)),
+                'price': info.get('cost', info.get('price', 0)),
+                'stock': info.get('count', info.get('quantity', 0)),
+            })
+        
+        services.sort(key=lambda s: s['sid'])
+        
+        # 搜索过滤
+        if search:
+            services = [s for s in services if search in s['sid'].lower() or search in s['name'].lower()]
+        
+        return render_template('admin/herosms_services.html', services=services, country=country, search=search, error=None)
+    except Exception as e:
+        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error=f'查询失败: {e}')
