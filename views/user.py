@@ -361,7 +361,7 @@ def api_sms(view_token):
         channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
         db.close()
         if not project:
-            return jsonify({'ok': False, 'msg': '项目不存在'})
+            return jsonify({'ok': False, 'msg': '项目不存在或已删除'})
 
     # 传递 activation_id（HeroSMS 等渠道需要）
     aid = s.get('activation_id') or ''
@@ -424,7 +424,7 @@ def release_phone():
     db.close()
 
     if not project:
-        return jsonify({'ok': False, 'msg': '项目不存在'})
+        return jsonify({'ok': False, 'msg': '项目不存在或已删除'})
 
     # 从注册中心获取渠道
     ch = get_channel_registry().get(s['channel_id'])
