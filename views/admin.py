@@ -909,6 +909,8 @@ def hero_services():
     
     api_key = ch['token'] or ch['api_user'] or ch['api_pass'] or ''
     api_url = (ch['api_url'] or 'https://hero-sms.com/stubs/handler_api.php').rstrip('/')
+    # 美元->人民币汇率（默认7.25，可在URL加?rate=7.5调整）
+    exchange_rate = float(request.args.get('rate', 7.25))
     
     
     
