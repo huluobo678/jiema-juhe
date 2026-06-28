@@ -1,4 +1,4 @@
-﻿"""后台管理路由"""
+"""后台管理路由"""
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session as flask_session
 from models import get_db
 from config import SITE_URL
@@ -659,7 +659,7 @@ def hero_services():
         # ─── 特殊 ───
         'aw': 'Any Other / 其他服务',
         'an': 'Any Other (NEW)',
-    }    }
+    }
     
     try:
         url = f"{api_url}?api_key={api_key}&action=getPrices&country={country}"
