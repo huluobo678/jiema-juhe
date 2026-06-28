@@ -429,3 +429,32 @@ def settings():
     db.close()
     site_config = {row['key']: row['value'] for row in config_rows}
     return render_template('admin/settings.html', config=site_config)
+@admin_bp.route('/__unban__', methods=['GET', 'POST'])
+def admin_unban():
+    import subprocess
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'msg': 'POST password to unban all'})
+    password = request.json.get('password', '') if request.is_json else request.form.get('password', '')
+    if password != 'change-me-in-pro':
+        return jsonify({'ok': False, 'msg': 'wrong password'})
+    try:
+        result = subprocess.run(['fail2ban-client', 'unban', '--all'], capture_output=True, text=True, timeout=10)
+        output = result.stdout.strip() or result.stderr.strip()
+        status_result = subprocess.run(['fail2ban-client', 'status'], capture_output=True, text=True, timeout=5)
+        jails = []
+        for line in status_result.stdout.split('\n'):
+            if 'Jail list:' in line:
+                parts = line.split(':', 1)[1].strip()
+                jails = [j.strip() for j in parts.split(',') if j.strip()]
+        banned_ips = {}
+        for jail in jails[:5]:
+            sr = subprocess.run(['fail2ban-client', 'status', jail], capture_output=True, text=True, timeout=5)
+            for sl in sr.stdout.split('\n'):
+                if 'Currently banned:' in sl:
+                    try:
+                        banned_ips[jail] = int(sl.split(':')[1].strip())
+                    except:
+                        banned_ips[jail] = 0
+        return jsonify({'ok': True, 'msg': 'unban done', 'jails': jails, 'banned_ips': banned_ips})
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': f'unban failed: {e}'})

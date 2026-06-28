@@ -341,7 +341,7 @@ def api_sms(view_token):
 
     if s['status'] == 'received':
         db.close()
-        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone']})
+        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
 
     # 从注册中心获取渠道实例（避免重复实例化）
     ch = get_channel_registry().get(s['channel_id'])
@@ -390,7 +390,7 @@ def api_sms(view_token):
                        WHERE id=?""", (code, sms_content, s['id']))
         db2.commit()
         db2.close()
-        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone']})
+        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
 
     err_msg = data.get('msg') or ''
     if '余额' in err_msg or '余额不足' in err_msg:

@@ -82,7 +82,11 @@ async function poll() {
             document.getElementById('waiting').classList.add('d-none');
             document.getElementById('result').classList.remove('d-none');
             document.getElementById('codeDisplay').textContent = d.code;
-            document.getElementById('smsDisplay').textContent = d.sms || '(无短信内容)';
+            var displayText = d.sms || '(无短信内容)';
+            if (d.channel_type === 'herosms' && displayText && !/[一-龥]/.test(displayText)) {
+                displayText = '[海外短信内容]\n' + displayText + '\n\n(海外平台短信为英文，属于正常情况)';
+            }
+            document.getElementById('smsDisplay').textContent = displayText;
             polling = false;
             document.getElementById('releaseBtn').textContent = '✅ 已收到';
             document.getElementById('releaseBtn').style.opacity = '0.5';

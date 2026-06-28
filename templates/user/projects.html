@@ -385,10 +385,14 @@ async function pollSms() {
             if (d.ok) {
                 if (d.code) {
                     // 收到验证码
-                    document.getElementById('csStateLabel').textContent = '✅ 已收到验证码';
+                    document.getElementById('csStateLabel').textContent = '✅ 已收到验证码 (' + (d.channel_type === 'herosms' ? '海外' : '国内') + ')';
                     document.getElementById('csStateLabel').style.color = '#059669';
                     document.getElementById('csCodeDisplay').textContent = d.code;
-                    document.getElementById('csSmsContent').textContent = d.sms || '';
+                    var smsRaw = d.sms || '';
+                    if (d.channel_type === 'herosms' && smsRaw && !/[一-龥]/.test(smsRaw)) {
+                        smsRaw = '[海外短信内容]\n' + smsRaw + '\n\n(这是海外平台发送的验证码，文字为英文属于正常情况)';
+                    }
+                    document.getElementById('csSmsContent').textContent = smsRaw;
                     document.getElementById('csCodeSection').style.display = 'block';
                     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
                     polling = false;
