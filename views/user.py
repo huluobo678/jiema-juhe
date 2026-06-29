@@ -493,16 +493,17 @@ def send_code():
     code = ''.join(random.choices('0123456789', k=6))
     expire_at = __import__('time').time() + 600
 
+    from lib.email import send_verify_code
+    ok, msg = send_verify_code(email, code)
+    if not ok:
+        return jsonify({'ok': False, 'msg': msg})
+
     db = get_db()
+    db.execute("DELETE FROM verify_codes WHERE email=?", (email,))
     db.execute("INSERT INTO verify_codes (email, code, expire_at) VALUES (?,?,?)", (email, code, expire_at))
     db.commit()
     db.close()
-
-    from lib.email import send_verify_code
-    ok, msg = send_verify_code(email, code)
-    if ok:
-        return jsonify({'ok': True, 'msg': '验证码已发送'})
-    return jsonify({'ok': False, 'msg': msg})
+    return jsonify({'ok': True, 'msg': '验证码已发送'})
 
 @user_bp.route('/register', methods=['GET', 'POST'])
 def register():
