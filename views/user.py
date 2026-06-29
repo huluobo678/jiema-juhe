@@ -1,6 +1,7 @@
 ﻿"""前台用户路由"""
 import uuid, random, time
 from flask import Blueprint, render_template, request, jsonify, abort
+from werkzeug.security import generate_password_hash, check_password_hash
 from models import get_db, calculate_final_price
 from config import SITE_URL
 from lib.scheduler import scheduler as smart_scheduler
@@ -34,6 +35,13 @@ def log_transaction(db, account_token, tx_type, amount, balance_after, descripti
     db.execute("""INSERT INTO transactions (account_token, type, amount, balance_after, description, project_id, card_id, session_id, created_at)
                   VALUES (?,?,?,?,?,?,?,?,?)""",
                (account_token, tx_type, amount, balance_after, description, project_id, card_id, session_id, beijing_now_str()))
+
+def validate_login_password(password):
+    if not password or len(password) < 6:
+        return False, '密码至少需要 6 位'
+    if len(password) > 72:
+        return False, '密码不能超过 72 位'
+    return True, ''
 
 @user_bp.route('/')
 def index():
@@ -543,6 +551,13 @@ def register():
         if not email.endswith('@qq.com'):
             return jsonify({'ok': False, 'msg': '仅支持 QQ 邮箱（@qq.com）'})
         code = request.form.get('code', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        ok, msg = validate_login_password(password)
+        if not ok:
+            return jsonify({'ok': False, 'msg': msg})
+        if confirm_password and password != confirm_password:
+            return jsonify({'ok': False, 'msg': '两次输入的密码不一致'})
         account_token = request.cookies.get('account_token')
 
         db = get_db()
@@ -568,23 +583,23 @@ def register():
         db.execute("UPDATE verify_codes SET used=1 WHERE id=?", (row['id'],))
         db.execute("DELETE FROM verify_codes WHERE email=? AND id!=?", (email, row['id']))
 
-        # 检查该邮箱是否已绑定其他账户
-        existing = db.execute("SELECT id FROM accounts WHERE email=? AND email_verified=1", (email,)).fetchone()
-        if existing:
+        password_hash = generate_password_hash(password)
+        existing = db.execute("SELECT id, token FROM accounts WHERE email=? AND email_verified=1", (email,)).fetchone()
+        if existing and existing['token'] != account_token:
             db.close()
-            return jsonify({'ok': False, 'msg': '该邮箱已绑定其他账户'})
+            return jsonify({'ok': False, 'msg': '该邮箱已绑定，请直接登录'})
 
         if account_token:
             # 已有账户 → 绑定邮箱
             acc = db.execute("SELECT id FROM accounts WHERE token=?", (account_token,)).fetchone()
             if not acc:
-                db.execute("INSERT INTO accounts (token, email, email_verified) VALUES (?,?,1)", (account_token, email))
+                db.execute("INSERT INTO accounts (token, email, email_verified, password_hash) VALUES (?,?,1,?)", (account_token, email, password_hash))
             else:
-                db.execute("UPDATE accounts SET email=?, email_verified=1 WHERE token=?", (email, account_token))
+                db.execute("UPDATE accounts SET email=?, email_verified=1, password_hash=? WHERE token=?", (email, password_hash, account_token))
         else:
             # 没有 account_token → 创建新账户
             account_token = uuid.uuid4().hex
-            db.execute("INSERT INTO accounts (token, email, email_verified) VALUES (?,?,1)", (account_token, email))
+            db.execute("INSERT INTO accounts (token, email, email_verified, password_hash) VALUES (?,?,1,?)", (account_token, email, password_hash))
 
         db.commit()
         db.close()
@@ -594,6 +609,29 @@ def register():
         return resp
 
     return render_template('user/register.html')
+
+@user_bp.route('/login', methods=['GET', 'POST'])
+@user_bp.route('/user/login', methods=['GET', 'POST'])
+def user_login():
+    """用户邮箱密码登录"""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if not email.endswith('@qq.com'):
+            return jsonify({'ok': False, 'msg': '请输入 QQ 邮箱'})
+        db = get_db()
+        acc = db.execute("SELECT token, password_hash FROM accounts WHERE email=? AND email_verified=1", (email,)).fetchone()
+        db.close()
+        if not acc:
+            return jsonify({'ok': False, 'msg': '该邮箱未绑定，请先绑定邮箱'})
+        if not acc['password_hash']:
+            return jsonify({'ok': False, 'msg': '该邮箱尚未设置登录密码，请重新绑定邮箱设置密码'})
+        if not check_password_hash(acc['password_hash'], password):
+            return jsonify({'ok': False, 'msg': '邮箱或密码错误'})
+        resp = jsonify({'ok': True, 'msg': '登录成功', 'account_token': acc['token']})
+        resp.set_cookie('account_token', acc['token'], max_age=30*24*3600)
+        return resp
+    return render_template('user/login.html')
 
 @user_bp.route('/user/cards')
 def user_cards():
@@ -607,16 +645,18 @@ def user_account():
     email = None
     referred_by = None
     invite_link = None
+    has_password = False
     if account_token:
         db = get_db()
-        acc = db.execute("SELECT email, referred_by FROM accounts WHERE token=?", (account_token,)).fetchone()
+        acc = db.execute("SELECT email, referred_by, password_hash FROM accounts WHERE token=?", (account_token,)).fetchone()
         if acc:
             email = acc['email']
             referred_by = acc['referred_by']
+            has_password = bool(row_value(acc, 'password_hash'))
             if email:
                 invite_link = SITE_URL.rstrip('/') + '/?ref=' + account_token
         db.close()
-    return render_template('user/account.html', email=email, referred_by=referred_by, invite_link=invite_link)
+    return render_template('user/account.html', email=email, referred_by=referred_by, invite_link=invite_link, has_password=has_password)
 
 @user_bp.route('/logout')
 def logout():

@@ -3,8 +3,8 @@
 {% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>📧 绑定 QQ 邮箱</h2>
-    <p>绑定后自动生成邀请链接，分享给好友享 5% 返利</p>
+    <h2>绑定 QQ 邮箱</h2>
+    <p>绑定邮箱并设置登录密码，后续可用 QQ 邮箱和密码登录原账户</p>
 </div>
 <div style="display:flex;flex-wrap:wrap;gap:20px">
     <div style="flex:1;min-width:300px;max-width:460px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
@@ -17,15 +17,24 @@
             <input type="text" id="codeInput" placeholder="验证码" style="flex:1;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
             <button id="sendBtn" onclick="sendCode()" style="padding:10px 18px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem">获取验证码</button>
         </div>
+        <div style="margin-bottom:16px">
+            <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">登录密码</div>
+            <input type="password" id="passwordInput" placeholder="至少 6 位" minlength="6" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+        <div style="margin-bottom:18px">
+            <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">确认密码</div>
+            <input type="password" id="confirmPasswordInput" placeholder="再次输入密码" minlength="6" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
         <button onclick="bindEmail()" style="width:100%;padding:12px;background:#059669;color:white;border:none;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer">确认绑定</button>
+        <div style="margin-top:14px;text-align:center;font-size:0.88rem;color:#64748b">已经绑定过？<a href="/login" style="color:#059669;font-weight:600;text-decoration:none">去登录</a></div>
     </div>
     <div style="flex:1;min-width:280px;max-width:420px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
-        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">🎁 邀请返利说明</h3>
+        <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 12px">邀请返利说明</h3>
         <ul style="padding-left:18px;color:#475569;line-height:1.9;font-size:0.9rem">
-            <li>绑定 QQ 邮箱后自动生成<strong>专属邀请链接</strong></li>
-            <li>分享链接给好友 → 好友通过链接访问并绑定邮箱 → 邀请关系建立</li>
-            <li>好友后续充值金额的 <strong>5%</strong> 实时返利到你的余额</li>
-            <li>绑定后在「账户信息」页面查看和复制邀请链接</li>
+            <li>绑定 QQ 邮箱后自动生成专属邀请链接</li>
+            <li>好友通过邀请链接访问并绑定邮箱后，邀请关系会自动建立</li>
+            <li>好友后续充值金额的 <strong>5%</strong> 会实时返利到你的余额</li>
+            <li>绑定后可用 QQ 邮箱和密码登录，找回原账户余额与记录</li>
         </ul>
     </div>
 </div>
@@ -37,7 +46,7 @@ let sendCountdown = 60;
 
 async function sendCode() {
     const email = document.getElementById('emailInput').value.trim();
-    if (!email.toLowerCase().endsWith('@qq.com')) { alert('请使用 QQ 邮箱（@qq.com）'); return; }
+    if (!email.toLowerCase().endsWith('@qq.com')) { showResult(false, '请使用 QQ 邮箱（@qq.com）'); return; }
     if (sendCountdown < 60) return;
     const r = await fetch('/send-code', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
     const d = await r.json();
@@ -66,13 +75,21 @@ async function sendCode() {
 async function bindEmail() {
     const email = document.getElementById('emailInput').value.trim();
     const code = document.getElementById('codeInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+    if (!email.toLowerCase().endsWith('@qq.com')) { showResult(false, '请使用 QQ 邮箱（@qq.com）'); return; }
+    if (!code) { showResult(false, '请输入验证码'); return; }
+    if (password.length < 6) { showResult(false, '密码至少需要 6 位'); return; }
+    if (password !== confirmPassword) { showResult(false, '两次输入的密码不一致'); return; }
     const form = new URLSearchParams();
     form.append('email', email);
     form.append('code', code);
+    form.append('password', password);
+    form.append('confirm_password', confirmPassword);
     const r = await fetch('/register', {method:'POST', body: form});
     const d = await r.json();
     showResult(d.ok, d.msg);
-    if (d.ok) { setTimeout(() => window.location.href = '/user/account', 1500); }
+    if (d.ok) { setTimeout(() => window.location.href = '/user/account', 1000); }
 }
 
 function showResult(ok, msg) {

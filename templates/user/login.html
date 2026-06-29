@@ -1,0 +1,48 @@
+{% extends "user/layout.html" %}
+{% set page_title = "云枢速联 - 邮箱登录" %}
+{% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>邮箱登录</h2>
+    <p>使用已绑定的 QQ 邮箱和密码登录原账户</p>
+</div>
+<div style="max-width:460px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+    <div id="loginResult" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:0.9rem"></div>
+    <div style="margin-bottom:16px">
+        <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">QQ 邮箱</div>
+        <input type="email" id="emailInput" placeholder="yourname@qq.com" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'">
+    </div>
+    <div style="margin-bottom:18px">
+        <div style="font-size:0.85rem;color:#64748b;margin-bottom:6px">登录密码</div>
+        <input type="password" id="passwordInput" placeholder="请输入密码" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:0.95rem;outline:none" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e2e8f0'" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <button onclick="login()" style="width:100%;padding:12px;background:#059669;color:white;border:none;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer">登录</button>
+    <div style="margin-top:14px;text-align:center;font-size:0.88rem;color:#64748b">还没有绑定？<a href="/register" style="color:#059669;font-weight:600;text-decoration:none">去绑定邮箱</a></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function login() {
+    const email = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    if (!email.toLowerCase().endsWith('@qq.com')) { showResult(false, '请输入 QQ 邮箱'); return; }
+    if (!password) { showResult(false, '请输入密码'); return; }
+    const form = new URLSearchParams();
+    form.append('email', email);
+    form.append('password', password);
+    const r = await fetch('/login', {method:'POST', body: form});
+    const d = await r.json();
+    showResult(d.ok, d.msg);
+    if (d.ok) { setTimeout(() => window.location.href = '/user/account', 800); }
+}
+
+function showResult(ok, msg) {
+    const el = document.getElementById('loginResult');
+    el.style.display = 'block';
+    el.style.background = ok ? '#f0fdf4' : '#fef2f2';
+    el.style.color = ok ? '#166534' : '#991b1b';
+    el.style.border = ok ? '1px solid #bbf7d0' : '1px solid #fecaca';
+    el.textContent = msg;
+}
+</script>
+{% endblock %}

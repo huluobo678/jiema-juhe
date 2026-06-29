@@ -34,6 +34,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN password_hash TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE sms_sessions ADD COLUMN expire_at TEXT")
     except Exception:
         pass
@@ -156,6 +160,7 @@ def init_db():
             concurrent_limit INTEGER DEFAULT 5,    -- 并发上限
             email TEXT,
             email_verified INTEGER DEFAULT 0,
+            password_hash TEXT DEFAULT '',
             referred_by TEXT,                      -- 推荐人token
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
