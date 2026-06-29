@@ -13,9 +13,10 @@ user_bp = Blueprint('user', __name__)
 
 def project_service(project):
     country = project['country'] if 'country' in project.keys() else ''
+    location = project['location'] if 'location' in project.keys() else ''
     price_limit = project['upstream_price_limit_usd'] if 'upstream_price_limit_usd' in project.keys() else 0
-    if country or price_limit:
-        return {'sid': project['sid'], 'country': country, 'max_price': price_limit}
+    if country or location or price_limit:
+        return {'sid': project['sid'], 'country': country, 'location': location, 'max_price': price_limit}
     return project['sid']
 
 def row_value(row, key, default=''):
@@ -36,13 +37,13 @@ def index():
     
     db = get_db()
     projects = db.execute("""
-        SELECT p.id, p.name, p.price, p.base_price, c.markup_percent, c.name as channel_name
+        SELECT p.id, p.name, p.price, p.base_price, p.base_price_type, c.markup_percent, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
     projects_clean = []
     for p in projects:
-        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'])
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
         projects_clean.append({'id': p['id'], 'name': p['name'], 'price': final_price})
     db.close()
     return render_template('user/index.html', projects=projects_clean)
@@ -112,20 +113,22 @@ def announcements():
     db = get_db()
     rows = db.execute("SELECT * FROM announcements WHERE active=1 ORDER BY priority DESC, id DESC").fetchall()
     db.close()
+    if request.args.get('json') == '1':
+        return jsonify({'ok': True, 'list': [dict(r) for r in rows]})
     return render_template('user/announcements.html', announcements=rows)
 
 @user_bp.route('/projects')
 def project_list():
     db = get_db()
     rows = db.execute("""
-        SELECT p.id, p.name, p.price, p.base_price, c.markup_percent
+        SELECT p.id, p.name, p.price, p.base_price, p.base_price_type, p.category, p.country, p.location, c.markup_percent, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
     projects = []
     for p in rows:
-        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'])
-        projects.append({'id': p['id'], 'name': p['name'], 'price': final_price})
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
+        projects.append({'id': p['id'], 'name': p['name'], 'price': final_price, 'category': p['category'], 'country': p['country'], 'location': p['location'], 'channel_name': p['channel_name'], 'base_price_type': p['base_price_type']})
     db.close()
     return render_template('user/projects.html', projects=projects)
 
@@ -186,6 +189,7 @@ def recent_sms():
             'code': r['code'] if r['status'] == 'received' else '',
             'time': r['received_at'] if r['received_at'] else '',
             'project': r['project'],
+            'project_name': r['project'],
             'status': r['status'],
         })
     return jsonify({'ok': True, 'list': items})
@@ -213,7 +217,8 @@ def start_order():
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
     markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
-    total_price = calculate_final_price(project['price'], base_price, markup)
+    price_type = project['base_price_type'] if 'base_price_type' in project.keys() else 'auto'
+    total_price = calculate_final_price(project['price'], base_price, markup, price_type)
 
     if float(acc['balance']) < total_price:
         db.close()
@@ -288,7 +293,8 @@ def start_order_by_number():
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
     markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
-    total_price = calculate_final_price(project['price'], base_price, markup)
+    price_type = project['base_price_type'] if 'base_price_type' in project.keys() else 'auto'
+    total_price = calculate_final_price(project['price'], base_price, markup, price_type)
 
     if float(acc['balance']) < total_price:
         db.close()

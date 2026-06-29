@@ -50,6 +50,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE projects ADD COLUMN location TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE projects ADD COLUMN upstream_price_limit_usd REAL DEFAULT 0")
     except Exception:
         pass
@@ -71,9 +75,9 @@ def _migrate_upgrade(conn):
         pass
     conn.commit()
 
-def calculate_final_price(project_price, project_base_price, channel_markup):
-    """计算最终售价"""
-    if project_price and float(project_price) > 0:
+def calculate_final_price(project_price, project_base_price, channel_markup, price_type='auto'):
+    """计算最终售价。fixed 使用项目固定价；auto 使用上游成本加渠道加价。"""
+    if price_type == 'fixed' and project_price and float(project_price) > 0:
         return float(project_price)
     base = float(project_base_price or 1.0)
     return round(base * (1 + float(channel_markup or 0) / 100), 2)
@@ -108,7 +112,13 @@ def init_db():
             channel_id INTEGER REFERENCES channels(id),
             sid TEXT NOT NULL,                    -- 项目ID/服务代码（豪猪=数字ID，HeroSMS=tg/go等）
             country TEXT DEFAULT '',              -- 国家代码（HeroSMS 使用）
+            location TEXT DEFAULT '',             -- 归属地（豪猪等渠道可用）
             upstream_price_limit_usd REAL DEFAULT 0, -- 最高上游价格（HeroSMS 使用，美元）
+            base_price REAL DEFAULT 0,            -- 上游成本/自动加价基准
+            base_price_type TEXT DEFAULT 'auto',  -- auto 自动加价 / fixed 固定售价
+            category TEXT DEFAULT '',             -- 前台分类
+            icon TEXT DEFAULT '',                 -- 前台图标
+            color TEXT DEFAULT '#f1f5f9',         -- 前台颜色
             price REAL NOT NULL DEFAULT 1.0,       -- 每码价格(元)
             description TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))

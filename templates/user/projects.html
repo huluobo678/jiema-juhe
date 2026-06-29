@@ -199,26 +199,34 @@
 <!-- ===== 项目网格 ===== -->
 <div class="s2-card">
     <h3>📋 接码项目 <span style="font-weight:400;font-size:0.8rem;color:#94a3b8">({{ projects|length }} 个)</span></h3>
+    <input id="projectSearchInput" type="text" placeholder="搜索项目、分类、国家、归属地..." oninput="applyProjectSearch()" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.9rem;margin-bottom:12px">
     <div class="project-filter-bar" id="filterBar">
         <span class="project-filter-tag active" onclick="filterProjects('all', this)">全部</span>
         {% set tags = [] %}
+        {% set countries = [] %}
+        {% set locations = [] %}
         {% for p in projects %}
           {% if p.category and p.category not in tags %}{% set _ = tags.append(p.category) %}{% endif %}
+          {% if p.country and p.country not in countries %}{% set _ = countries.append(p.country) %}{% endif %}
+          {% if p.location and p.location not in locations %}{% set _ = locations.append(p.location) %}{% endif %}
         {% endfor %}
         {% for tag in tags %}
           <span class="project-filter-tag" onclick="filterProjects('{{ tag|e }}', this)">{{ tag }}</span>
         {% endfor %}
+        {% for c in countries %}<span class="project-filter-tag" onclick="filterProjects('{{ c|e }}', this)">{{ c }}</span>{% endfor %}
+        {% for l in locations %}<span class="project-filter-tag" onclick="filterProjects('{{ l|e }}', this)">{{ l }}</span>{% endfor %}
     </div>
     <div class="s2-project-grid" id="projectGrid">
         {% for p in projects %}
         <div class="s2-project" data-pid="{{ p.id }}" data-pname="{{ p.name|e }}" data-category="{{ p.category|e if p.category else '' }}"
+             data-country="{{ p.country|e if p.country else '' }}" data-location="{{ p.location|e if p.location else '' }}" data-search="{{ (p.name ~ ' ' ~ (p.category or '') ~ ' ' ~ (p.country or '') ~ ' ' ~ (p.location or ''))|e }}"
              onclick="startOrder({{ p.id }}, '{{ p.name|e }}')">
             <div class="pj-icon" style="background:{{ p.color or '#f1f5f9' }}">
               {% if p.icon %}{{ p.icon|safe }}{% else %}📦{% endif %}
             </div>
             <div>
               <div class="pj-name">{{ p.name }}</div>
-              <div class="pj-meta">{{ p.category if p.category else '通用' }}</div>
+              <div class="pj-meta">{{ p.category if p.category else '通用' }}{% if p.country %} · {{ p.country }}{% endif %}{% if p.location %} · {{ p.location }}{% endif %}</div>
             </div>
             <div class="pj-bottom">
               <span class="s2-price-pill">{{ p.price }} 元</span>
@@ -280,13 +288,24 @@ function showToast(msg, type) {
 }
 
 // ============ 项目筛选 ============
+let activeProjectFilter = 'all';
 function filterProjects(category, el) {
+    activeProjectFilter = category || 'all';
     document.querySelectorAll('#filterBar .project-filter-tag').forEach(function(t){ t.classList.remove('active'); });
     if (el) el.classList.add('active');
-    var cards = document.querySelectorAll('#projectGrid .s2-project');
-    cards.forEach(function(c){
-        var cat = c.getAttribute('data-category') || '';
-        c.style.display = (category === 'all' || cat === category) ? '' : 'none';
+    applyProjectSearch();
+}
+function applyProjectSearch() {
+    var q = (document.getElementById('projectSearchInput')?.value || '').trim().toLowerCase();
+    var filter = (activeProjectFilter || 'all').toLowerCase();
+    document.querySelectorAll('#projectGrid .s2-project').forEach(function(c){
+        var cat = (c.getAttribute('data-category') || '').toLowerCase();
+        var country = (c.getAttribute('data-country') || '').toLowerCase();
+        var location = (c.getAttribute('data-location') || '').toLowerCase();
+        var search = (c.getAttribute('data-search') || '').toLowerCase();
+        var filterOk = filter === 'all' || cat === filter || country === filter || location === filter;
+        var searchOk = !q || search.indexOf(q) >= 0;
+        c.style.display = (filterOk && searchOk) ? '' : 'none';
     });
 }
 

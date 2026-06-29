@@ -36,6 +36,11 @@ class HaoZhuMa(ChannelBase):
         code = data.get('code')
         return code == 0 or code == '0'
 
+    def _parse_project_sid(self, project_sid):
+        if isinstance(project_sid, dict):
+            return str(project_sid.get('sid') or '').strip(), str(project_sid.get('location') or '').strip()
+        return str(project_sid or '').strip(), ''
+
     def login(self):
         """登录获取token"""
         data = self._req(self.API_PATHS['login'], {
@@ -62,7 +67,10 @@ class HaoZhuMa(ChannelBase):
     def get_phone(self, project_sid) -> dict:
         if not self._token:
             self.login()
-        params = {'token': self._token, 'sid': project_sid}
+        sid, location = self._parse_project_sid(project_sid)
+        params = {'token': self._token, 'sid': sid}
+        if location:
+            params['location'] = location
         data = self._req(self.API_PATHS['getPhone'], params)
         self.circuit.record(self._is_ok(data))
         return data
@@ -71,7 +79,10 @@ class HaoZhuMa(ChannelBase):
         """指定号码取号"""
         if not self._token:
             self.login()
-        params = {'token': self._token, 'sid': project_sid, 'phone': phone}
+        sid, location = self._parse_project_sid(project_sid)
+        params = {'token': self._token, 'sid': sid, 'phone': phone}
+        if location:
+            params['location'] = location
         data = self._req(self.API_PATHS['getPhone'], params)
         self.circuit.record(self._is_ok(data))
         return data
@@ -79,8 +90,9 @@ class HaoZhuMa(ChannelBase):
     def get_message(self, project_sid, phone, activation_id=None) -> dict:
         if not self._token:
             self.login()
+        sid, _location = self._parse_project_sid(project_sid)
         data = self._req(self.API_PATHS['getMessage'], {
-            'token': self._token, 'sid': project_sid, 'phone': phone
+            'token': self._token, 'sid': sid, 'phone': phone
         })
         ok = self._is_ok(data)
         self.circuit.record(ok)
@@ -97,8 +109,9 @@ class HaoZhuMa(ChannelBase):
     def add_blacklist(self, project_sid, phone, activation_id=None) -> bool:
         if not self._token:
             self.login()
+        sid, _location = self._parse_project_sid(project_sid)
         data = self._req(self.API_PATHS['addBlacklist'], {
-            'token': self._token, 'sid': project_sid, 'phone': phone
+            'token': self._token, 'sid': sid, 'phone': phone
         })
         return self._is_ok(data)
 
