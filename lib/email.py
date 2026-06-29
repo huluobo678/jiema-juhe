@@ -29,8 +29,7 @@ def send_email(to_address, subject, html_body):
     from_name = _get_config('smtp_from_name', '云枢智联')
 
     if not user or not password:
-        print(f"[DEV EMAIL] To: {to_address}, Subject: {subject}, Body: {html_body[:100]}...")
-        return (True, 'dev模式，邮件已记录日志')
+        return (False, '邮件服务未配置，请联系管理员')
 
     try:
         msg = MIMEMultipart('alternative')
