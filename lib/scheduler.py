@@ -1,115 +1,79 @@
-"""智能调度器 - 为项目选择最优渠道"""
-import time, random
+"""Smart channel scheduler."""
 from channels.base import registry as channel_registry
 from lib.circuit import circuit_registry
 
+
 class SmartScheduler:
-    """
-    智能调度器 - 多策略选择最优渠道
-    
-    策略：
-    1. 优先 alive 的渠道
-    2. 排除熔断中的渠道
-    3. 按并发负载排序（低→高）
-    4. 同负载选成本最低的
-    5. 支持 sticky session（同一对话绑定同一渠道）
-    """
-    
     def __init__(self):
-        self._sticky: dict[str, int] = {}  # view_token → channel_id
-    
-    def pick_channel(self, project, exclude_ids: set = None) -> tuple:
-        """
-        为项目选择最优渠道
-        返回: (channel_adapter, channel_db_row) or (None, None)
-        """
-        if exclude_ids is None:
-            exclude_ids = set()
-        
+        self._sticky: dict[str, int] = {}
+
+    def _project_channel_id(self, project):
+        try:
+            value = project['channel_id']
+        except (KeyError, IndexError, TypeError):
+            value = getattr(project, 'channel_id', None)
+        return int(value) if value is not None else None
+
+    def _available(self, channel, exclude_ids: set) -> bool:
+        if channel is None:
+            return False
+        if channel.channel_id in exclude_ids:
+            return False
+        if channel.is_dead():
+            return False
+        return circuit_registry.get(f'channel:{channel.name}').allow_request()
+
+    def pick_channel(self, project, exclude_ids: set = None):
+        """Pick the channel bound to the project, falling back only when no binding exists."""
+        exclude_ids = exclude_ids or set()
+        channel_id = self._project_channel_id(project)
+        if channel_id is not None:
+            channel = channel_registry.get(channel_id)
+            return channel if self._available(channel, exclude_ids) else None
+
         candidates = []
-        
-        # 项目可以绑定多个渠道（通过 project_channels 表）
-        # 或回退到所有可用渠道
-        for ch in channel_registry.get_all_alive():
-            if ch.channel_id in exclude_ids:
-                continue
-            if ch.is_dead():
-                continue
-            
-            cb = circuit_registry.get(f'channel:{ch.name}')
-            if not cb.allow_request():
-                continue
-            
-            # 分数 = 并发数 + (0 if alive else 999)
-            score = ch.concurrency
-            if not ch.alive:
-                score += 999
-            
-            candidates.append((score, ch))
-        
+        for channel in channel_registry.get_all_alive():
+            if self._available(channel, exclude_ids):
+                candidates.append((channel.concurrency, channel))
         if not candidates:
             return None
-        
-        # 按分数升序（并发最低的优先）
-        candidates.sort(key=lambda x: x[0])
+        candidates.sort(key=lambda item: item[0])
         return candidates[0][1]
-    
+
     def pick_channel_for_project(self, project_channels, exclude_ids: set = None):
-        """
-        从项目的渠道列表中选最优
-        project_channels: [(channel_id, channel_name, order)]
-        """
-        if exclude_ids is None:
-            exclude_ids = set()
-        
+        exclude_ids = exclude_ids or set()
         for pc in project_channels:
-            cid = pc['channel_id']
-            if cid in exclude_ids:
+            channel = channel_registry.get(pc['channel_id'])
+            if not self._available(channel, exclude_ids):
                 continue
-            ch = channel_registry.get(cid)
-            if ch is None:
+            if not channel.acquire():
                 continue
-            if ch.is_dead():
-                continue
-            cb = circuit_registry.get(f'channel:{ch.name}')
-            if not cb.allow_request():
-                continue
-            if not ch.acquire():
-                continue  # 并发满，跳过
-            
-            return ch
-        
+            return channel
         return None
-    
+
     def set_sticky(self, view_token: str, channel_id: int):
-        """绑定粘性会话"""
         self._sticky[view_token] = channel_id
-    
+
     def get_sticky(self, view_token: str) -> int | None:
-        """获取粘性会话绑定的渠道"""
         return self._sticky.get(view_token)
-    
+
     def release_sticky(self, view_token: str):
-        """释放粘性会话"""
         self._sticky.pop(view_token, None)
 
     def status(self) -> list[dict]:
-        """调度器状态"""
         result = []
-        for ch in channel_registry.get_all():
-            cb = circuit_registry.get(f'channel:{ch.name}')
-            s = cb.stats()
+        for channel in channel_registry.get_all():
+            circuit = circuit_registry.get(f'channel:{channel.name}').stats()
             result.append({
-                'id': ch.channel_id,
-                'name': ch.name,
-                'alive': ch.alive,
-                'concurrency': ch.concurrency,
-                'max_concurrency': ch.max_concurrency,
-                'circuit_state': s['state'],
-                'fail_rate': round(s['fail_rate'] * 100, 1),
+                'id': channel.channel_id,
+                'name': channel.name,
+                'alive': channel.alive,
+                'concurrency': channel.concurrency,
+                'max_concurrency': channel.max_concurrency,
+                'circuit_state': circuit['state'],
+                'fail_rate': round(circuit['fail_rate'] * 100, 1),
             })
         return result
 
 
-# 全局单例
 scheduler = SmartScheduler()
