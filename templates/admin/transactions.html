@@ -1,0 +1,40 @@
+{% extends "admin/layout.html" %}
+{% block title %}消费明细{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>消费明细</h2>
+    <p>查看用户充值、消费和余额变化</p>
+</div>
+
+<form method="get" style="margin-bottom:20px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;max-width:720px">
+        <input type="text" name="q" class="input-modern" placeholder="搜索 token / 邮箱 / 说明" value="{{ q }}" style="flex:1;min-width:240px">
+        <select name="type" class="input-modern" style="width:140px">
+            <option value="" {% if not tx_type %}selected{% endif %}>全部类型</option>
+            <option value="recharge" {% if tx_type == 'recharge' %}selected{% endif %}>充值</option>
+            <option value="consume" {% if tx_type == 'consume' %}selected{% endif %}>消费</option>
+        </select>
+        <button class="btn-modern btn-primary-modern" type="submit">搜索</button>
+        {% if q or tx_type %}<a href="/admin/transactions" class="btn-modern btn-outline-modern" style="display:inline-flex;align-items:center;text-decoration:none">清除</a>{% endif %}
+    </div>
+</form>
+
+<table class="table-modern">
+    <thead><tr><th>时间</th><th>用户</th><th>类型</th><th>说明</th><th style="text-align:right">金额</th><th style="text-align:right">变动后余额</th></tr></thead>
+    <tbody>
+    {% for t in transactions %}
+    <tr>
+        <td>{{ t.created_at }}</td>
+        <td><code style="font-size:0.75rem">{{ t.account_token[:16] }}...</code>{% if t.email %}<br><span style="color:#64748b;font-size:0.8rem">{{ t.email }}</span>{% endif %}</td>
+        <td>{{ '充值' if t.type == 'recharge' else ('消费' if t.type == 'consume' else t.type) }}</td>
+        <td>{{ t.description or '-' }}{% if t.project_name %}<span style="color:#64748b"> · {{ t.project_name }}</span>{% endif %}</td>
+        <td style="text-align:right;font-weight:700;color:{{ '#059669' if t.amount > 0 else '#dc2626' }}">{{ '+' if t.amount > 0 else '' }}{{ '%.2f'|format(t.amount) }} 元</td>
+        <td style="text-align:right;font-weight:700">{{ '%.2f'|format(t.balance_after) }} 元</td>
+    </tr>
+    {% endfor %}
+    {% if not transactions %}
+    <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">暂无流水</td></tr>
+    {% endif %}
+    </tbody>
+</table>
+{% endblock %}

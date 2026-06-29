@@ -30,6 +30,11 @@ def session_channel_meta(db, session_row):
     channel_type = row_value(channel, 'channel_type', 'haozhuma')
     return channel_name, channel_type
 
+def log_transaction(db, account_token, tx_type, amount, balance_after, description='', project_id=None, card_id=None, session_id=None):
+    db.execute("""INSERT INTO transactions (account_token, type, amount, balance_after, description, project_id, card_id, session_id)
+                  VALUES (?,?,?,?,?,?,?,?)""",
+               (account_token, tx_type, amount, balance_after, description, project_id, card_id, session_id))
+
 @user_bp.route('/')
 def index():
     """首页 - 项目选择"""
@@ -87,14 +92,18 @@ def redeem():
         acc = db.execute("SELECT * FROM accounts WHERE token=?", (account_token,)).fetchone()
         if acc:
             db.execute("UPDATE accounts SET balance=balance+? WHERE token=?", (card['credit'], account_token))
+            updated = db.execute("SELECT balance FROM accounts WHERE token=?", (account_token,)).fetchone()
+            log_transaction(db, account_token, 'recharge', float(card['credit']), updated['balance'], f'卡密充值 {code}', card_id=card['id'])
         else:
             account_token = uuid.uuid4().hex
-            db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)", 
+            db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)",
                        (account_token, card['credit'], final_referred_by))
+            log_transaction(db, account_token, 'recharge', float(card['credit']), float(card['credit']), f'卡密充值 {code}', card_id=card['id'])
     else:
         account_token = uuid.uuid4().hex
         db.execute("INSERT INTO accounts (token, balance, referred_by) VALUES (?,?,?)",
                    (account_token, card['credit'], final_referred_by))
+        log_transaction(db, account_token, 'recharge', float(card['credit']), float(card['credit']), f'卡密充值 {code}', card_id=card['id'])
 
     db.commit()
     db.close()
@@ -435,6 +444,8 @@ def api_sms(view_token):
             db2.rollback()
             db2.close()
             return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'formatted_phone': format_phone(s['phone'], row_value(channel, 'name')), 'channel_type': row_value(channel, 'channel_type', 'haozhuma')})
+        updated_balance = db2.execute("SELECT balance FROM accounts WHERE token=?", (s['account_token'],)).fetchone()
+        log_transaction(db2, s['account_token'], 'consume', -float(final_price), updated_balance['balance'] if updated_balance else 0, f'接码消费 {row_value(project, "name", "项目")}', project_id=s['project_id'], session_id=s['id'])
         db2.commit()
         db2.close()
         return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'formatted_phone': format_phone(s['phone'], row_value(channel, 'name')), 'channel_type': row_value(channel, 'channel_type', 'haozhuma')})
@@ -630,3 +641,22 @@ def user_history():
         """, (account_token,)).fetchall()
         db.close()
     return render_template('user/history.html', sessions=sessions)
+
+@user_bp.route('/transactions')
+@user_bp.route('/user/transactions')
+def user_transactions():
+    """账户充值和消费明细"""
+    account_token = request.cookies.get('account_token')
+    rows = []
+    if account_token:
+        db = get_db()
+        rows = db.execute("""
+            SELECT t.*, p.name as project_name, c.code as card_code
+            FROM transactions t
+            LEFT JOIN projects p ON t.project_id=p.id
+            LEFT JOIN cards c ON t.card_id=c.id
+            WHERE t.account_token=?
+            ORDER BY t.id DESC LIMIT 200
+        """, (account_token,)).fetchall()
+        db.close()
+    return render_template('user/transactions.html', transactions=rows)

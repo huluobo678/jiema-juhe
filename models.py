@@ -73,6 +73,20 @@ def _migrate_upgrade(conn):
         conn.execute("ALTER TABLE projects ADD COLUMN color TEXT DEFAULT '#f1f5f9'")
     except Exception:
         pass
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_token TEXT NOT NULL,
+            type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            balance_after REAL NOT NULL DEFAULT 0,
+            description TEXT DEFAULT '',
+            project_id INTEGER,
+            card_id INTEGER,
+            session_id INTEGER,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
+        )
+    ''')
     conn.commit()
 
 def calculate_final_price(project_price, project_base_price, channel_markup, price_type='auto'):
@@ -173,7 +187,21 @@ def init_db():
             used INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
-        
+
+        -- 账户流水
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_token TEXT NOT NULL,
+            type TEXT NOT NULL,                 -- recharge / consume / refund / bonus
+            amount REAL NOT NULL,               -- 充值为正，消费为负
+            balance_after REAL NOT NULL DEFAULT 0,
+            description TEXT DEFAULT '',
+            project_id INTEGER,
+            card_id INTEGER,
+            session_id INTEGER,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
+        );
+
         -- 管理员
         CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

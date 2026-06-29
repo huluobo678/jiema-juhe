@@ -1,0 +1,49 @@
+{% extends "user/layout.html" %}
+{% set page_title = "云枢速联 - 消费明细" %}
+{% block sidebar %}{% include "user/_sidebar.html" %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>消费明细</h2>
+    <p>查看最近充值、消费和余额变化</p>
+</div>
+<div style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+    <table style="width:100%;border-collapse:collapse">
+        <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">时间</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">类型</th>
+                <th style="padding:12px 16px;text-align:left;font-size:0.85rem;color:#64748b;font-weight:600">说明</th>
+                <th style="padding:12px 16px;text-align:right;font-size:0.85rem;color:#64748b;font-weight:600">金额</th>
+                <th style="padding:12px 16px;text-align:right;font-size:0.85rem;color:#64748b;font-weight:600">变动后余额</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:10px 16px;font-size:0.82rem;color:#64748b;white-space:nowrap">{{ t.created_at }}</td>
+                <td style="padding:10px 16px;font-size:0.86rem">
+                    {% if t.type == 'recharge' %}
+                    <span style="background:#f0fdf4;color:#059669;padding:3px 10px;border-radius:12px;font-weight:600">充值</span>
+                    {% elif t.type == 'consume' %}
+                    <span style="background:#fef2f2;color:#dc2626;padding:3px 10px;border-radius:12px;font-weight:600">消费</span>
+                    {% else %}
+                    <span style="background:#f1f5f9;color:#475569;padding:3px 10px;border-radius:12px;font-weight:600">{{ t.type }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px 16px;font-size:0.88rem;color:#0f172a">
+                    {{ t.description or '-' }}
+                    {% if t.project_name %}<span style="color:#64748b"> · {{ t.project_name }}</span>{% endif %}
+                </td>
+                <td style="padding:10px 16px;text-align:right;font-weight:700;color:{{ '#059669' if t.amount > 0 else '#dc2626' }}">
+                    {{ '+' if t.amount > 0 else '' }}{{ '%.2f'|format(t.amount) }} 元
+                </td>
+                <td style="padding:10px 16px;text-align:right;font-weight:700;color:#0f172a">{{ '%.2f'|format(t.balance_after) }} 元</td>
+            </tr>
+        {% endfor %}
+        {% if not transactions %}
+            <tr><td colspan="5" style="padding:40px;text-align:center;color:#94a3b8">暂无消费明细</td></tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

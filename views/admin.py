@@ -777,6 +777,39 @@ def users():
     return render_template('admin/users.html', accounts=rows, q=q)
 
 
+@admin_bp.route('/transactions')
+
+@login_required
+
+def admin_transactions():
+
+    q = request.args.get('q', '').strip()
+    tx_type = request.args.get('type', '').strip()
+    where = []
+    params = []
+
+    if q:
+        where.append("(t.account_token LIKE ? OR a.email LIKE ? OR t.description LIKE ?)")
+        params.extend([f'%{q}%', f'%{q}%', f'%{q}%'])
+    if tx_type:
+        where.append("t.type=?")
+        params.append(tx_type)
+
+    sql = """SELECT t.*, a.email, p.name as project_name, c.code as card_code
+             FROM transactions t
+             LEFT JOIN accounts a ON t.account_token=a.token
+             LEFT JOIN projects p ON t.project_id=p.id
+             LEFT JOIN cards c ON t.card_id=c.id"""
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY t.id DESC LIMIT 500"
+
+    db = get_db()
+    rows = db.execute(sql, params).fetchall()
+    db.close()
+    return render_template('admin/transactions.html', transactions=rows, q=q, tx_type=tx_type)
+
+
 
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 
