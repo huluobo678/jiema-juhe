@@ -1,6 +1,5 @@
 ﻿"""前台用户路由"""
 import uuid, random, time
-from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, jsonify, abort
 from models import get_db, calculate_final_price
 from config import SITE_URL
@@ -8,6 +7,7 @@ from lib.scheduler import scheduler as smart_scheduler
 from channels import get_registry as get_channel_registry
 import re
 from lib.phone_format import format_phone
+from lib.time_utils import beijing_now, beijing_now_str, beijing_after
 
 user_bp = Blueprint('user', __name__)
 
@@ -31,9 +31,9 @@ def session_channel_meta(db, session_row):
     return channel_name, channel_type
 
 def log_transaction(db, account_token, tx_type, amount, balance_after, description='', project_id=None, card_id=None, session_id=None):
-    db.execute("""INSERT INTO transactions (account_token, type, amount, balance_after, description, project_id, card_id, session_id)
-                  VALUES (?,?,?,?,?,?,?,?)""",
-               (account_token, tx_type, amount, balance_after, description, project_id, card_id, session_id))
+    db.execute("""INSERT INTO transactions (account_token, type, amount, balance_after, description, project_id, card_id, session_id, created_at)
+                  VALUES (?,?,?,?,?,?,?,?,?)""",
+               (account_token, tx_type, amount, balance_after, description, project_id, card_id, session_id, beijing_now_str()))
 
 @user_bp.route('/')
 def index():
@@ -72,7 +72,7 @@ def redeem():
         db.close()
         return jsonify({'ok': False, 'msg': '卡密无效或已使用'})
 
-    cur = db.execute("UPDATE cards SET used=1, used_at=datetime('now','localtime') WHERE id=? AND used=0", (card['id'],))
+    cur = db.execute("UPDATE cards SET used=1, used_at=? WHERE id=? AND used=0", (beijing_now_str(), card['id']))
     if cur.rowcount != 1:
         db.rollback()
         db.close()
@@ -179,7 +179,7 @@ def today_count():
     db = get_db()
     r = db.execute("""SELECT COUNT(*) as cnt FROM sms_sessions
                      WHERE account_token=? AND status='received'
-                     AND date(received_at)=date('now','localtime')""", (token,)).fetchone()
+                     AND date(received_at)=?""", (token, beijing_now().strftime('%Y-%m-%d'))).fetchone()
     db.close()
     return jsonify({'ok': True, 'count': r[0] if r and r[0] else 0})
 
@@ -276,7 +276,7 @@ def start_order():
 
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    expire_at = (datetime.utcnow() + timedelta(seconds=200)).strftime('%Y-%m-%d %H:%M:%S')
+    expire_at = beijing_after(200)
     db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, status, cost)
                   VALUES (?,?,?,?,?,?,?, 'waiting', ?)""",
               (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
@@ -360,7 +360,7 @@ def start_order_by_number():
 
     smart_scheduler.set_sticky(view_token, channel_id)
 
-    expire_at = (datetime.utcnow() + timedelta(seconds=200)).strftime('%Y-%m-%d %H:%M:%S')
+    expire_at = beijing_after(200)
     db.execute("""INSERT INTO sms_sessions (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, status, cost)
                   VALUES (?,?,?,?,?,?,?, 'waiting', ?)""",
               (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
@@ -438,8 +438,8 @@ def api_sms(view_token):
             db2.rollback()
             db2.close()
             return jsonify({'ok': False, 'msg': '余额不足，请充值'})
-        cur = db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
-                          WHERE id=? AND status!='received'""", (code, sms_content, s['id']))
+        cur = db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=?
+                          WHERE id=? AND status!='received'""", (code, sms_content, beijing_now_str(), s['id']))
         if cur.rowcount != 1:
             db2.rollback()
             db2.close()

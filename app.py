@@ -7,6 +7,11 @@ from channels import init_channels, get_registry
 from lib.health import init_health_checker
 import subprocess
 import os
+import time
+
+os.environ.setdefault('TZ', 'Asia/Shanghai')
+if hasattr(time, 'tzset'):
+    time.tzset()
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
