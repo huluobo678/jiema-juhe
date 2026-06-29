@@ -928,10 +928,13 @@ def hero_services():
     def service_matches(sid, name):
         if not search:
             return True
-        terms = {sid.lower(), normalize_term(sid), name.lower(), normalize_term(name)}
-        if search in ('any other', 'anyother', 'other', '其他', 'aw', 'an'):
-            terms.update({'anyother', 'any other', 'other', '其他', 'aw', 'an'})
-        return search in terms or normalize_term(search) in terms or any(search in term for term in terms)
+        sid_key = sid.lower()
+        name_key = name.lower()
+        normalized_search = normalize_term(search)
+        normalized_name = normalize_term(name)
+        if normalized_search in ('anyother', 'other', '其他', 'aw', 'an'):
+            return sid_key in ('aw', 'an') or 'any other' in name_key or 'anyother' in normalized_name or '其他' in name_key
+        return search in sid_key or search in name_key or normalized_search in normalize_term(sid) or normalized_search in normalized_name
 
     context = {
         'services': [],

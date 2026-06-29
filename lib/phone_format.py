@@ -7,7 +7,7 @@ def format_phone(phone: str, channel_name: str = "") -> str:
     
     HeroSMS returns international numbers like 447599685269.
     This formats them as +44 (759) 968 52 69.
-    Domestic numbers (haozhuma) are returned as-is.
+    Domestic numbers (haozhuma) are shown with +86 to avoid confusion with +1 numbers.
     """
     if not phone or not isinstance(phone, str):
         return phone or ""
@@ -26,11 +26,11 @@ def format_phone(phone: str, channel_name: str = "") -> str:
     if not digits:
         return phone
     
-    # HaoZhuMa domestic mobile numbers are already normalized.
-    # Keep 11-digit China mobile numbers unchanged instead of treating them as +1.
+    # HaoZhuMa domestic mobile numbers are shown with China's country code.
+    # Only do this outside HeroSMS so US/Canada numbers still format as +1.
     channel_key = (channel_name or '').lower()
     if 'herosms' not in channel_key and len(digits) == 11 and digits.startswith('1') and digits[1] in '3456789':
-        return digits
+        return f"+86 {digits}"
 
     # ---------- HeroSMS international numbers ----------
     if digits.startswith('44') and len(digits) >= 11:
