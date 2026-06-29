@@ -29,6 +29,7 @@
         <h5 style="margin-bottom:8px;font-size:0.9rem">已生成卡密：</h5>
         <textarea class="code-list-area" id="codeList" rows="5" readonly></textarea>
         <button class="btn-modern btn-outline-modern" style="margin-top:8px;padding:8px 20px;font-size:0.9rem" onclick="copyCodes()">📋 复制所有卡密</button>
+        <button class="btn-modern btn-outline-modern" style="margin-top:8px;margin-left:8px;padding:8px 20px;font-size:0.9rem" onclick="location.reload()">刷新列表</button>
     </div>
 </div>
 
@@ -63,17 +64,31 @@ async function generateCards() {
     const d = await r.json();
     btn.disabled = false; btn.textContent = '生成';
     if (d.ok) {
+        const codes = d.codes || [];
         const gr = document.getElementById('genResult');
         gr.style.display = 'block';
-        document.getElementById('codeList').value = d.codes.join('\n');
-        // 自动刷新表格
-        setTimeout(function() { location.reload(); }, 500);
+        document.getElementById('codeList').value = codes.join('\n');
+        downloadCodesTxt(codes, prefix, credit);
     } else alert(d.msg);
 }
 function copyCodes() {
     const ta = document.getElementById('codeList');
     ta.select();
     navigator.clipboard.writeText(ta.value).then(() => alert('已复制' + ta.value.split('\n').length + ' 条卡密'));
+}
+function downloadCodesTxt(codes, prefix, credit) {
+    const text = (codes || []).join('\n').trim();
+    if (!text) return;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const blob = new Blob([text + '\n'], {type: 'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${prefix || 'cards'}-${credit || '0'}yuan-${timestamp}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
 {% endblock %}

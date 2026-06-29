@@ -861,13 +861,11 @@ def settings():
 
     return render_template('admin/settings.html', config=site_config)
 @admin_bp.route('/__unban__', methods=['GET', 'POST'])
+@login_required
 def admin_unban():
     import subprocess
     if request.method == 'GET':
-        return jsonify({'ok': True, 'msg': 'POST password to unban all'})
-    password = request.json.get('password', '') if request.is_json else request.form.get('password', '')
-    if password != 'change-me-in-pro':
-        return jsonify({'ok': False, 'msg': 'wrong password'})
+        return jsonify({'ok': True, 'msg': 'POST to unban all'})
     try:
         result = subprocess.run(['fail2ban-client', 'unban', '--all'], capture_output=True, text=True, timeout=10)
         output = result.stdout.strip() or result.stderr.strip()

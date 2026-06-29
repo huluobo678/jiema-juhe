@@ -30,14 +30,14 @@
 </div>
 
 <div class="card-modern" style="padding:24px;margin-bottom:24px">
-    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">💰 上游余额 <span id="balanceTime" style="font-size:0.75rem;color:#94a3b8;font-weight:400"></span></h4>
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">上游余额 <span id="balanceTime" style="font-size:0.75rem;color:#94a3b8;font-weight:400"></span></h4>
     <div id="balanceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
         <div style="text-align:center;color:#94a3b8;padding:20px">加载中...</div>
     </div>
 </div>
 
 <div class="card-modern" style="padding:24px;margin-bottom:24px">
-    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">🔌 渠道状态</h4>
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 16px">渠道状态</h4>
     <table class="table-modern" style="width:100%">
         <thead>
             <tr>
@@ -55,10 +55,10 @@
 </div>
 
 <div class="card-modern" style="padding:24px">
-    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 8px">🚀 从 GitHub 部署</h4>
-    <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 16px">在 GitHub 上改完代码后，点击下面按钮自动拉取到服务器并重启</p>
+    <h4 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 8px">GitHub 部署</h4>
+    <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 16px">代码在 GitHub 完善并推送后，再通过 SSH 在服务器执行一次受控部署。</p>
     <div style="display:flex;gap:12px;align-items:center">
-        <button onclick="deploy()" style="padding:10px 28px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">部署</button>
+        <button onclick="deploy()" style="padding:10px 28px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer">查看流程</button>
         <span id="deployStatus" style="font-size:0.85rem;color:var(--text-muted)"></span>
     </div>
     <pre id="deployOutput" style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:8px;margin-top:12px;font-size:0.8rem;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap"></pre>
@@ -68,8 +68,8 @@
 {% block scripts %}
 <script>
 async function loadStats() {
-    const r = await fetch('/admin/stats?json=1');
     try {
+        const r = await fetch('/admin/stats?json=1');
         const d = await r.json();
         if (d.channelCount !== undefined) {
             document.getElementById('channelCount').textContent = d.channelCount;
@@ -78,69 +78,67 @@ async function loadStats() {
             document.getElementById('sessionCount').textContent = d.sessionCount;
             document.getElementById('userCount').textContent = d.userCount;
         }
-    } catch(e) {}
+    } catch (e) {}
 }
+
 async function loadChannelStatus() {
+    const tbody = document.getElementById('channelStatusBody');
     try {
         const r = await fetch('/admin/channels/status');
         const d = await r.json();
-        const tbody = document.getElementById('channelStatusBody');
         if (!d.ok || !d.channels || d.channels.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">暂无渠道</td></tr>';
             return;
         }
         tbody.innerHTML = d.channels.map(function(ch) {
-            var statusIcon = ch.alive ? '✅' : '❌';
-            var statusColor = ch.alive ? '#22c55e' : '#ef4444';
-            var cbIcon = ch.circuit === 'closed' ? '✅' : ch.circuit === 'open' ? '🔴' : '🟡';
-            var cbLabel = ch.circuit === 'closed' ? '正常' : ch.circuit === 'open' ? '熔断' : '半开';
-            var cbColor = ch.circuit === 'open' ? '#ef4444' : '#22c55e';
-            var concurrency = (ch.concurrent||0) + '/' + (ch.concurrent_limit||5);
-            return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>' + (ch.name||ch.id) + '</strong></td>' +
-                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+statusColor+'">'+statusIcon+' '+(ch.alive?'正常':'死亡')+'</td>' +
-                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:'+cbColor+'">'+cbIcon+' '+cbLabel+'</td>' +
-                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+concurrency+'</td>' +
-                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">'+(ch.last_ping||'-')+'</td></tr>';
+            const statusColor = ch.alive ? '#22c55e' : '#ef4444';
+            const cbLabel = ch.circuit === 'closed' ? '正常' : ch.circuit === 'open' ? '熔断' : '半开';
+            const cbColor = ch.circuit === 'open' ? '#ef4444' : '#22c55e';
+            const concurrency = (ch.concurrent || 0) + '/' + (ch.concurrent_limit || 5);
+            return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>' + (ch.name || ch.id) + '</strong></td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:' + statusColor + '">' + (ch.alive ? '正常' : '死亡') + '</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;color:' + cbColor + '">' + cbLabel + '</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">' + concurrency + '</td>' +
+                '<td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">' + (ch.last_ping || '-') + '</td></tr>';
         }).join('');
-    } catch(e) {
-        document.getElementById('channelStatusBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px">加载失败</td></tr>';
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px">加载失败</td></tr>';
     }
 }
+
 async function loadBalances() {
+    const grid = document.getElementById('balanceGrid');
     try {
         const r = await fetch('/admin/channel-balances');
         const d = await r.json();
-        const grid = document.getElementById('balanceGrid');
-        document.getElementById('balanceTime').textContent = '🔄 ' + new Date().toLocaleTimeString();
+        document.getElementById('balanceTime').textContent = new Date().toLocaleTimeString();
         if (!d.ok || !d.balances || d.balances.length === 0) {
             grid.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">暂无渠道</div>';
             return;
         }
         grid.innerHTML = d.balances.map(function(b) {
-            var color = b.balance > 0 ? '#059669' : '#ef4444';
+            const color = b.balance > 0 ? '#059669' : '#ef4444';
             return '<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;border:1px solid #e2e8f0">' +
                 '<div style="font-size:0.8rem;color:#64748b;margin-bottom:4px">' + b.name + '</div>' +
-                '<div style="font-size:1.5rem;font-weight:700;color:'+color+'">¥' + b.balance.toFixed(2) + '</div></div>';
+                '<div style="font-size:1.5rem;font-weight:700;color:' + color + '">¥' + Number(b.balance || 0).toFixed(2) + '</div></div>';
         }).join('');
-    } catch(e) {
-        document.getElementById('balanceGrid').innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px">加载失败</div>';
+    } catch (e) {
+        grid.innerHTML = '<div style="text-align:center;color:#ef4444;padding:20px">加载失败</div>';
     }
 }
-async function deploy() {
-    const btn = document.querySelector('button[onclick="deploy()"]');
+
+function deploy() {
     const status = document.getElementById('deployStatus');
     const output = document.getElementById('deployOutput');
-    btn.disabled = true; btn.textContent = '部署中...'; status.textContent = '⏳ 正在拉取...';
+    status.textContent = '网页部署已禁用，请使用 SSH 受控部署。';
     output.style.display = 'block';
-    try {
-        const r = await fetch('/__deploy__');
-        output.textContent = await r.text();
-        status.textContent = '✅ 部署完成！正在重启...';
-        await fetch('/__restart__');
-    } catch(e) { status.textContent = '❌ ' + e; }
-    setTimeout(function() { btn.disabled = false; btn.textContent = '部署'; }, 5000);
+    output.textContent = '流程：git fetch -> git reset --hard origin/master -> systemctl restart jiema.service -> 健康检查';
 }
-loadStats(); loadChannelStatus(); loadBalances();
-setInterval(loadChannelStatus, 10000); setInterval(loadBalances, 30000);
+
+loadStats();
+loadChannelStatus();
+loadBalances();
+setInterval(loadChannelStatus, 10000);
+setInterval(loadBalances, 30000);
 </script>
 {% endblock %}

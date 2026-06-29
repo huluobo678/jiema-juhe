@@ -48,7 +48,11 @@ def redeem():
         db.close()
         return jsonify({'ok': False, 'msg': '卡密无效或已使用'})
 
-    db.execute("UPDATE cards SET used=1, used_at=datetime('now','localtime') WHERE id=?", (card['id'],))
+    cur = db.execute("UPDATE cards SET used=1, used_at=datetime('now','localtime') WHERE id=? AND used=0", (card['id'],))
+    if cur.rowcount != 1:
+        db.rollback()
+        db.close()
+        return jsonify({'ok': False, 'msg': '卡密无效或已使用'})
 
     account_token = request.cookies.get('account_token')
     
@@ -243,6 +247,7 @@ def start_order():
               (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
     db.commit()
     db.close()
+    ch.release()
 
     return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'formatted_phone': format_phone(phone, ch.name), 'view_token': view_token})
 
@@ -322,6 +327,7 @@ def start_order_by_number():
               (account_token, project_id, channel_id, phone, activation_id, view_token, expire_at, total_price))
     db.commit()
     db.close()
+    ch.release()
 
     return jsonify({'ok': True, 'view_url': f'{SITE_URL}/sms/{view_token}', 'phone': phone, 'formatted_phone': format_phone(phone, ch.name), 'view_token': view_token})
 
@@ -387,9 +393,17 @@ def api_sms(view_token):
         db2 = get_db()
         # 收码时扣款（使用下单时锁定的价格）
         final_price = s['cost'] or 0
-        db2.execute("UPDATE accounts SET balance=balance-? WHERE token=?", (final_price, s['account_token']))
-        db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
-                       WHERE id=?""", (code, sms_content, s['id']))
+        cur = db2.execute("UPDATE accounts SET balance=balance-? WHERE token=? AND balance>=?", (final_price, s['account_token'], final_price))
+        if cur.rowcount != 1:
+            db2.rollback()
+            db2.close()
+            return jsonify({'ok': False, 'msg': '余额不足，请充值'})
+        cur = db2.execute("""UPDATE sms_sessions SET status='received', code=?, sms_content=?, received_at=datetime('now','localtime')
+                          WHERE id=? AND status!='received'""", (code, sms_content, s['id']))
+        if cur.rowcount != 1:
+            db2.rollback()
+            db2.close()
+            return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
         db2.commit()
         db2.close()
         return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
@@ -429,7 +443,9 @@ def release_phone():
     # 从注册中心获取渠道
     ch = get_channel_registry().get(s['channel_id'])
     if ch is None:
-        channel = db.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
+        db3 = get_db()
+        channel = db3.execute("SELECT * FROM channels WHERE id=?", (s['channel_id'],)).fetchone()
+        db3.close()
         if channel:
             from channels.factory import create_channel_adapter
             ch = create_channel_adapter(channel)
