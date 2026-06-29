@@ -1,60 +1,63 @@
 {% extends "admin/layout.html" %}
 {% block title %}项目管理{% endblock %}
 {% block head %}
-<style>.mb-3{margin-bottom:16px}</style>
+<style>.mb-3{margin-bottom:16px}.hint{font-size:.8rem;color:#94a3b8;font-weight:400}.tool-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}</style>
 {% endblock %}
 {% block content %}
 <h3>项目管理</h3>
-        <p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道和项目ID。价格设为0则自动按渠道加价%计算</p>
+<p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道。豪猪填写项目 ID；HeroSMS 填服务代码和国家代码。</p>
 
-
-        <button class="btn-modern btn-primary-modern" style="margin-bottom:20px" onclick="showAdd()">+ 添加项目</button>
-
-        <table class="table-modern">
-            <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>项目ID</th><th>价格</th><th>定价方式</th><th>描述</th><th>操作</th></tr></thead>
-            <tbody>
-            {% for p in projects %}
-            <tr>
-                <td>{{ p.id }}</td>
-                <td><strong>{{ p.name }}</strong></td>
-                <td>{{ p.category or '-' }}</td>
-                <td>{{ p.channel_name }}</td>
-                <td><code>{{ p.sid }}</code></td>
-                <td>{{ p.price }} 元</td>
-                <td>{{ '自动(加价)' if p.price==0 or p.price==0.0 else '固定' }}</td>
-                <td>{{ p.description or '-' }}</td>
-                <td>
-                    <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--warning);color:white;border:none;border-radius:6px;cursor:pointer" onclick="editProject({{ p.id }})">编辑</button>
-                    <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer" onclick="deleteProject({{ p.id }})">删除</button>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="tool-row">
+    <button class="btn-modern btn-primary-modern" onclick="showAdd()">+ 添加项目</button>
+    <a class="btn-modern btn-outline-modern" href="/admin/herosms-services" style="text-decoration:none">查询 HeroSMS 服务代码</a>
 </div>
 
+<table class="table-modern">
+    <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>服务代码</th><th>国家</th><th>上游成本</th><th>售价</th><th>描述</th><th>操作</th></tr></thead>
+    <tbody>
+    {% for p in projects %}
+    <tr>
+        <td>{{ p.id }}</td>
+        <td><strong>{{ p.name }}</strong></td>
+        <td>{{ p.category or '-' }}</td>
+        <td>{{ p.channel_name }}</td>
+        <td><code>{{ p.sid }}</code></td>
+        <td>{{ p.country or '-' }}</td>
+        <td>{{ p.base_price or 0 }} 元</td>
+        <td>{{ p.price }} 元</td>
+        <td>{{ p.description or '-' }}</td>
+        <td>
+            <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--warning);color:white;border:none;border-radius:6px;cursor:pointer" onclick="editProject({{ p.id }})">编辑</button>
+            <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--danger);color:white;border:none;border-radius:6px;cursor:pointer" onclick="deleteProject({{ p.id }})">删除</button>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
 <div class="modal-modern" id="projectModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
-    <div style="background:white;border-radius:12px;width:520px;max-width:90vw;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
+    <div style="background:white;border-radius:12px;width:640px;max-width:94vw;max-height:92vh;overflow:auto;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
         <div style="background:var(--bg-dark);color:white;padding:16px 24px;border-radius:12px 12px 0 0">
             <h5 style="margin:0" id="modalTitle">添加项目</h5>
         </div>
         <div style="padding:24px">
             <form id="projectForm">
                 <input type="hidden" name="edit_id" id="editId">
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">项目名称</label><input name="name" id="p_name" class="input-modern" required placeholder="如：淘宝注册"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">项目名称</label><input name="name" id="p_name" class="input-modern" required placeholder="如：腾讯元宝"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">选择渠道</label>
                     <select name="channel_id" id="p_channel_id" class="input-modern" required>
                         {% for c in channels %}
-                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        <option value="{{ c.id }}" data-name="{{ c.name }}">{{ c.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道项目ID / 服务代码 (sid)</label><input name="sid" id="p_sid" class="input-modern" required placeholder="豪猪填数字ID，HeroSMS填服务代码如 tg/go/dr"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">定价 (元/次) <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(设0则按渠道加价%自动计)</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">分类 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(用于前台筛选分组)</span></label><input name="category" id="p_category" class="input-modern" placeholder="如：社交、金融、购物"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">图标 (emoji或SVG)</label><input name="icon" id="p_icon" class="input-modern" placeholder="📱 或 SVG代码"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">颜色 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(6位hex色)</span></label><input name="color" id="p_color" class="input-modern" placeholder="#f1f5f9" value="#f1f5f9"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游服务代码 / 项目 ID <span class="hint">HeroSMS 如 tg/go，豪猪如 88920</span></label><input name="sid" id="p_sid" class="input-modern" required></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">国家代码 <span class="hint">HeroSMS 必填，例如 16；豪猪可留空</span></label><input name="country" id="p_country" class="input-modern" placeholder="16"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游成本(元) <span class="hint">从 HeroSMS 查询结果带入，用于参考或自动定价</span></label><input name="base_price" id="p_base_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">前台售价(元/次) <span class="hint">填 0 时按上游成本 + 渠道加价%</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">分类</label><input name="category" id="p_category" class="input-modern" placeholder="如：AI、社交、金融"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">图标</label><input name="icon" id="p_icon" class="input-modern" placeholder="📱 或 SVG 代码"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">颜色</label><input name="color" id="p_color" class="input-modern" placeholder="#f1f5f9" value="#f1f5f9"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">描述</label><input name="description" id="p_desc" class="input-modern"></div>
             </form>
         </div>
@@ -62,21 +65,28 @@
             <button class="btn-modern btn-outline-modern" onclick="document.getElementById('projectModal').style.display='none'">取消</button>
             <button class="btn-modern btn-primary-modern" onclick="submitProject()">保存</button>
         </div>
-    
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function showAdd() {
+function fillProject(data) {
+    document.getElementById('p_name').value = data.name || '';
+    document.getElementById('p_channel_id').value = data.channel_id || '';
+    document.getElementById('p_sid').value = data.sid || '';
+    document.getElementById('p_country').value = data.country || '';
+    document.getElementById('p_base_price').value = data.base_price || '0';
+    document.getElementById('p_price').value = data.price || '0';
+    document.getElementById('p_category').value = data.category || '';
+    document.getElementById('p_icon').value = data.icon || '';
+    document.getElementById('p_color').value = data.color || '#f1f5f9';
+    document.getElementById('p_desc').value = data.description || '';
+}
+function showAdd(prefill) {
     document.getElementById('modalTitle').textContent = '添加项目';
     document.getElementById('editId').value = '';
-    document.getElementById('p_name').value = '';
-    document.getElementById('p_sid').value = '';
-    document.getElementById('p_price').value = '0';
-    document.getElementById('p_category').value = '';
-    document.getElementById('p_icon').value = '';
-    document.getElementById('p_color').value = '#f1f5f9';
-    document.getElementById('p_desc').value = '';
+    fillProject(Object.assign({color:'#f1f5f9'}, prefill || {}));
     document.getElementById('projectModal').style.display = 'flex';
 }
 async function submitProject() {
@@ -93,20 +103,10 @@ async function submitProject() {
 async function editProject(id) {
     document.getElementById('modalTitle').textContent = '编辑项目';
     document.getElementById('editId').value = id;
-    // 获取当前数据填充
     const r = await fetch('/admin/projects/'+id+'/json');
     if (r.ok) {
         const d = await r.json();
-        if (d.ok) {
-            document.getElementById('p_name').value = d.project.name || '';
-            document.getElementById('p_channel_id').value = d.project.channel_id || '';
-            document.getElementById('p_sid').value = d.project.sid || '';
-            document.getElementById('p_price').value = d.project.price || '0';
-            document.getElementById('p_category').value = d.project.category || '';
-            document.getElementById('p_icon').value = d.project.icon || '';
-            document.getElementById('p_color').value = d.project.color || '#f1f5f9';
-            document.getElementById('p_desc').value = d.project.description || '';
-        }
+        if (d.ok) fillProject(d.project);
     }
     document.getElementById('projectModal').style.display = 'flex';
 }
@@ -116,6 +116,18 @@ async function deleteProject(id) {
     const d = await r.json();
     if (d.ok) location.reload();
 }
+(function applyHeroPrefill() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('source') !== 'herosms') return;
+    showAdd({
+        channel_id: params.get('channel_id') || '',
+        sid: params.get('sid') || '',
+        country: params.get('country') || '',
+        base_price: params.get('base_price') || '0',
+        price: params.get('price') || '0',
+        name: params.get('name') || '',
+        category: '海外'
+    });
+})();
 </script>
-<style>.mb-3{margin-bottom:16px}</style>
 {% endblock %}

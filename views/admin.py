@@ -447,11 +447,12 @@ def add_project():
 
     try:
 
-        db.execute("INSERT INTO projects (name, channel_id, sid, price, description, category, icon, color) VALUES (?,?,?,?,?,?,?,?)",
-
+        db.execute("""INSERT INTO projects (name, channel_id, sid, country, base_price, price, description, category, icon, color)
+                      VALUES (?,?,?,?,?,?,?,?,?,?)""",
                    (request.form['name'], request.form['channel_id'], request.form['sid'],
-
-                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
+                    request.form.get('country', '').strip(), float(request.form.get('base_price') or 0),
+                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''),
+                    request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
 
         db.commit()
 
@@ -477,13 +478,13 @@ def edit_project(id):
 
     try:
 
-        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, price=?, description=?, category=?, icon=?, color=?
-
+        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, country=?, base_price=?, price=?,
+                      description=?, category=?, icon=?, color=?
                       WHERE id=?""",
-
                    (request.form['name'], request.form['channel_id'], request.form['sid'],
-
-                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''), request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
+                    request.form.get('country', '').strip(), float(request.form.get('base_price') or 0),
+                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''),
+                    request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
 
         db.commit()
 
@@ -893,54 +894,83 @@ def admin_unban():
 @login_required
 def hero_services():
     """HeroSMS 服务列表查询（后台）"""
-    country = request.args.get('country', '16')
+    import json as json_module
+    import urllib.parse
+    import urllib.request
+
+    countries = [
+        {'id': '16', 'name': '英国/England'},
+        {'id': '22', 'name': '美国/USA'},
+        {'id': '7', 'name': '俄罗斯/Russia'},
+        {'id': '44', 'name': '立陶宛/Lithuania'},
+        {'id': '48', 'name': '荷兰/Netherlands'},
+        {'id': '1', 'name': '印度/India'},
+    ]
+    country = request.args.get('country', '16').strip() or '16'
     search = request.args.get('search', '').strip().lower()
-    
-    import urllib.request, json as jmod
-    
+    try:
+        exchange_rate = float(request.args.get('rate', 7.25))
+    except (TypeError, ValueError):
+        exchange_rate = 7.25
+
+    def suggested_price(cost):
+        cost = float(cost or 0)
+        return round(max(cost * 1.3, cost + 0.5), 2)
+
+    context = {
+        'services': [],
+        'countries': countries,
+        'country': country,
+        'search': search,
+        'rate': exchange_rate,
+        'channel_id': '',
+        'channel_name': '',
+        'suggested_price': suggested_price,
+        'error': None,
+    }
+
     db = get_db()
-    ch = db.execute("SELECT api_user, api_pass, api_url, token FROM channels WHERE channel_type='herosms' AND enabled=1 LIMIT 1").fetchone()
+    ch = db.execute("""SELECT id, name, api_user, api_pass, api_url, token
+                       FROM channels
+                       WHERE lower(channel_type)='herosms' AND enabled=1
+                       ORDER BY id LIMIT 1""").fetchone()
     db.close()
-    
+
     if not ch:
-        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error='请先添加并启用一个 HeroSMS 渠道')
-    
+        context['error'] = '请先添加并启用一个 HeroSMS 渠道'
+        return render_template('admin/herosms_services.html', **context)
+
+    context['channel_id'] = ch['id']
+    context['channel_name'] = ch['name']
     api_key = ch['token'] or ch['api_user'] or ch['api_pass'] or ''
     api_url = (ch['api_url'] or 'https://hero-sms.com/stubs/handler_api.php').rstrip('/')
-    # 美元->人民币汇率（默认7.25，可在URL加?rate=7.5调整）
-    exchange_rate = float(request.args.get('rate', 7.25))
-    
-    
-    
+    params = urllib.parse.urlencode({'api_key': api_key, 'action': 'getPrices', 'country': country})
+
     try:
-        url = f"{api_url}?api_key={api_key}&action=getPrices&country={country}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(f'{api_url}?{params}', headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read().decode('utf-8')
-            data = jmod.loads(raw)
-        
-        # data format: {"16": {"baq": {"cost": 0.07, "count": 186796}, "ccu": {...}}, ...}
-        country_data = data.get(country, data.get(list(data.keys())[0], {}))
-        
+        data = json_module.loads(raw)
+        country_data = data.get(country) or (next(iter(data.values())) if isinstance(data, dict) and data else {})
+
         services = []
         for sid, info in country_data.items():
+            if not isinstance(info, dict):
+                continue
             name = SERVICE_NAMES.get(sid, sid.upper())
-            cost_usd = float(info.get('cost', 0))
-            services.append({
+            cost_usd = float(info.get('cost') or 0)
+            item = {
                 'sid': sid,
                 'name': name,
                 'price_usd': cost_usd,
                 'price_cny': round(cost_usd * exchange_rate, 2),
-                'price': cost_usd,
                 'stock': info.get('count', info.get('quantity', 0)),
-            })
-        
-        services.sort(key=lambda s: s['sid'])
-        
-        if search:
-            services = [s for s in services if search in s['sid'].lower() or search in s['name'].lower()]
-        
-        return render_template('admin/herosms_services.html', services=services, country=country, search=search, error=None)
-    except Exception as e:
-        return render_template('admin/herosms_services.html', services=[], country=country, search=search, error=f'查询失败: {e}')
+            }
+            if not search or search in sid.lower() or search in name.lower():
+                services.append(item)
 
+        context['services'] = sorted(services, key=lambda s: s['sid'])
+    except Exception as e:
+        context['error'] = f'查询失败: {e}'
+
+    return render_template('admin/herosms_services.html', **context)

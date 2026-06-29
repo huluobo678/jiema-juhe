@@ -46,6 +46,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE projects ADD COLUMN country TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE projects ADD COLUMN base_price_type TEXT DEFAULT 'auto'")
     except Exception:
         pass
@@ -99,6 +103,7 @@ def init_db():
             name TEXT NOT NULL,                   -- 项目名称 eg. 淘宝注册
             channel_id INTEGER REFERENCES channels(id),
             sid TEXT NOT NULL,                    -- 项目ID/服务代码（豪猪=数字ID，HeroSMS=tg/go等）
+            country TEXT DEFAULT '',              -- 国家代码（HeroSMS 使用）
             price REAL NOT NULL DEFAULT 1.0,       -- 每码价格(元)
             description TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))

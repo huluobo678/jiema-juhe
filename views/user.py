@@ -11,6 +11,17 @@ from lib.phone_format import format_phone
 
 user_bp = Blueprint('user', __name__)
 
+def project_service(project):
+    country = project['country'] if 'country' in project.keys() else ''
+    if country:
+        return {'sid': project['sid'], 'country': country}
+    return project['sid']
+
+def row_value(row, key, default=''):
+    if row and key in row.keys():
+        return row[key]
+    return default
+
 @user_bp.route('/')
 def index():
     """首页 - 项目选择"""
@@ -61,7 +72,7 @@ def redeem():
     final_referred_by = None
     if invited_by:
         referrer = db.execute("SELECT * FROM accounts WHERE token=? AND email_verified=1", (invited_by,)).fetchone()
-        if referrer and referrer.get('email_verified'):
+        if referrer and row_value(referrer, 'email_verified'):
             final_referred_by = invited_by
 
     if account_token:
@@ -219,7 +230,7 @@ def start_order():
         return jsonify({'ok': False, 'msg': '渠道繁忙，请稍后再试'})
 
     try:
-        phone_data = ch.get_phone(project['sid'])
+        phone_data = ch.get_phone(project_service(project))
     except Exception as e:
         ch.release()
         db.close()
@@ -299,7 +310,7 @@ def start_order_by_number():
         return jsonify({'ok': False, 'msg': '渠道繁忙，请稍后再试'})
 
     try:
-        phone_data = ch.get_phone_by_number(project['sid'], phone_number)
+        phone_data = ch.get_phone_by_number(project_service(project), phone_number)
     except Exception as e:
         ch.release()
         db.close()
@@ -349,7 +360,7 @@ def api_sms(view_token):
 
     if s['status'] == 'received':
         db.close()
-        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
+        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
 
     # 从注册中心获取渠道实例（避免重复实例化）
     ch = get_channel_registry().get(s['channel_id'])
@@ -370,8 +381,8 @@ def api_sms(view_token):
             return jsonify({'ok': False, 'msg': '项目不存在或已删除'})
 
     # 传递 activation_id（HeroSMS 等渠道需要）
-    aid = s.get('activation_id') or ''
-    data = ch.get_message(project['sid'], s['phone'], activation_id=aid)
+    aid = row_value(s, 'activation_id') or ''
+    data = ch.get_message(project_service(project), s['phone'], activation_id=aid)
     ch.release()  # 释放并发槽位
 
     if data.get('code') == 0 or data.get('code') == '0':
@@ -403,10 +414,10 @@ def api_sms(view_token):
         if cur.rowcount != 1:
             db2.rollback()
             db2.close()
-            return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
+            return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
         db2.commit()
         db2.close()
-        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': s.get('channel_type', '')})
+        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
 
     err_msg = data.get('msg') or ''
     if '余额' in err_msg or '余额不足' in err_msg:
@@ -452,8 +463,8 @@ def release_phone():
 
     if s['status'] == 'waiting' and ch:
         try:
-            aid = s.get('activation_id') or ''
-            ch.add_blacklist(project['sid'], s['phone'], activation_id=aid)
+            aid = row_value(s, 'activation_id') or ''
+            ch.add_blacklist(project_service(project), s['phone'], activation_id=aid)
         except:
             pass
 
