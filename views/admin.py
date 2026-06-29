@@ -953,7 +953,7 @@ def hero_services():
                 continue
             eng = str(info.get('eng') or '').strip()
             chn = str(info.get('chn') or '').strip()
-            display = eng or chn or f'Country {cid}'
+            display = chn or eng or f'国家 {cid}'
             countries.append({'id': str(info.get('id') or cid), 'name': display})
         countries.sort(key=lambda item: int(item['id']) if str(item['id']).isdigit() else 999999)
         return countries or fallback_countries()
