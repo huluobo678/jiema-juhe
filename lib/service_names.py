@@ -1,7 +1,7 @@
 # SMS-Activate / HeroSMS 服务名称映射表
 SERVICE_NAMES = {
         # ─── 常用服务 ───
-        'ot': 'OpenAI / Telegram (通用)', 'tg': 'Telegram', 'wa': 'WhatsApp',
+        'ot': 'Any Other / Other Service', 'tg': 'Telegram', 'wa': 'WhatsApp',
         'go': 'Google / Gmail', 'fb': 'Facebook', 'tw': 'Twitter / X',
         'ig': 'Instagram', 'li': 'LinkedIn', 'dc': 'Discord', 'ti': 'Tinder',
         'am': 'Amazon', 'ub': 'Uber', 'av': 'Avito', 'ok': 'Odnoklassniki',
@@ -76,7 +76,7 @@ SERVICE_NAMES = {
         'okx': 'OKX', 'ol': 'OL', 'om': 'OM',
         'on': 'ON', 'oo': 'OO', 'op': 'OP',
         'oq': 'OQ', 'or': 'OR', 'os': 'OS',
-        'ot': 'OpenAI / Telegram (通用)', 'ou': 'OU', 'ov': 'OV',
+        'ot': 'Any Other / Other Service', 'ou': 'OU', 'ov': 'OV',
         'ow': 'OW', 'ox': 'OX', 'oy': 'OY',
         'oz': 'OZ', 'pa': 'PA', 'pb': 'PB',
         'pc': 'PC', 'pd': 'Pinduoduo / 拼多多', 'pe': 'PE',

@@ -932,8 +932,8 @@ def hero_services():
         name_key = name.lower()
         normalized_search = normalize_term(search)
         normalized_name = normalize_term(name)
-        if normalized_search in ('anyother', 'other', '其他', 'aw', 'an'):
-            return sid_key in ('aw', 'an') or 'any other' in name_key or 'anyother' in normalized_name or '其他' in name_key
+        if normalized_search in ('anyother', 'other', '其他', 'ot', 'aw', 'an'):
+            return sid_key in ('ot', 'aw', 'an') or 'any other' in name_key or 'anyother' in normalized_name or 'other service' in name_key or '其他' in name_key
         return search in sid_key or search in name_key or normalized_search in normalize_term(sid) or normalized_search in normalized_name
 
     context = {
