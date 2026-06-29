@@ -50,6 +50,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE projects ADD COLUMN upstream_price_limit_usd REAL DEFAULT 0")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE projects ADD COLUMN base_price_type TEXT DEFAULT 'auto'")
     except Exception:
         pass
@@ -104,6 +108,7 @@ def init_db():
             channel_id INTEGER REFERENCES channels(id),
             sid TEXT NOT NULL,                    -- 项目ID/服务代码（豪猪=数字ID，HeroSMS=tg/go等）
             country TEXT DEFAULT '',              -- 国家代码（HeroSMS 使用）
+            upstream_price_limit_usd REAL DEFAULT 0, -- 最高上游价格（HeroSMS 使用，美元）
             price REAL NOT NULL DEFAULT 1.0,       -- 每码价格(元)
             description TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))

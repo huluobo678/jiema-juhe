@@ -38,16 +38,21 @@ class HeroSMS(ChannelBase):
         return str(country or '16')
 
     def _parse_project_sid(self, project_sid):
+        max_price = 0
         if isinstance(project_sid, dict):
             service = str(project_sid.get('sid') or project_sid.get('service') or '').strip()
             country = str(project_sid.get('country') or '').strip() or self._get_country_param()
-            return service, country
+            try:
+                max_price = float(project_sid.get('max_price') or project_sid.get('maxPrice') or 0)
+            except (TypeError, ValueError):
+                max_price = 0
+            return service, country, max_price
         service = str(project_sid or '').strip()
         country = self._get_country_param()
         if '@' in service:
             service, country_part = service.split('@', 1)
             country = country_part.strip() or country
-        return service.strip(), country
+        return service.strip(), country, max_price
 
     def _parse_json_number(self, text: str) -> dict | None:
         if text.startswith('{'):
@@ -66,17 +71,21 @@ class HeroSMS(ChannelBase):
         return ok
 
     def get_phone(self, project_sid: str) -> dict:
-        service, country = self._parse_project_sid(project_sid)
+        service, country, max_price = self._parse_project_sid(project_sid)
         params = {'action': 'getNumberV2', 'service': service}
         if country:
             params['country'] = country
+        if max_price > 0:
+            params['maxPrice'] = max_price
         return self._do_get_phone(params)
 
     def get_phone_by_number(self, project_sid: str, phone: str) -> dict:
-        service, country = self._parse_project_sid(project_sid)
+        service, country, max_price = self._parse_project_sid(project_sid)
         params = {'action': 'getNumberV2', 'service': service, 'phone': phone}
         if country:
             params['country'] = country
+        if max_price > 0:
+            params['maxPrice'] = max_price
         return self._do_get_phone(params)
 
     def _do_get_phone(self, params: dict) -> dict:

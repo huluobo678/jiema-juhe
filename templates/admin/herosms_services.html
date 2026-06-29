@@ -46,7 +46,7 @@
         <td class="stock">{{ s.stock }}</td>
         <td class="hero-actions">
             <button class="btn-modern btn-outline-modern" style="padding:4px 10px;font-size:.82rem" onclick="copySid('{{ s.sid }}')" type="button">复制代码</button>
-            <a class="btn-modern btn-primary-modern" style="padding:4px 10px;font-size:.82rem;text-decoration:none" href="/admin/projects?source=herosms&channel_id={{ channel_id }}&sid={{ s.sid|urlencode }}&country={{ country|urlencode }}&base_price={{ s.price_cny }}&price={{ suggested_price(s.price_cny) }}&name={{ s.name|urlencode }}">创建项目</a>
+            <a class="btn-modern btn-primary-modern" style="padding:4px 10px;font-size:.82rem;text-decoration:none" href="/admin/projects?source=herosms&channel_id={{ channel_id }}&sid={{ s.sid|urlencode }}&country={{ country|urlencode }}&upstream_price_limit_usd={{ s.price_usd }}&base_price={{ s.price_cny }}&price={{ suggested_price(s.price_cny) }}&name={{ s.name|urlencode }}">创建项目</a>
         </td>
     </tr>
     {% else %}

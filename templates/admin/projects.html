@@ -13,7 +13,7 @@
 </div>
 
 <table class="table-modern">
-    <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>服务代码</th><th>国家</th><th>上游成本</th><th>售价</th><th>描述</th><th>操作</th></tr></thead>
+    <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>服务代码</th><th>国家</th><th>最高上游价</th><th>上游成本</th><th>售价</th><th>描述</th><th>操作</th></tr></thead>
     <tbody>
     {% for p in projects %}
     <tr>
@@ -23,6 +23,7 @@
         <td>{{ p.channel_name }}</td>
         <td><code>{{ p.sid }}</code></td>
         <td>{{ p.country or '-' }}</td>
+        <td>${{ p.upstream_price_limit_usd or 0 }}</td>
         <td>{{ p.base_price or 0 }} 元</td>
         <td>{{ p.price }} 元</td>
         <td>{{ p.description or '-' }}</td>
@@ -53,6 +54,7 @@
                 </div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游服务代码 / 项目 ID <span class="hint">HeroSMS 如 tg/go，豪猪如 88920</span></label><input name="sid" id="p_sid" class="input-modern" required></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">国家代码 <span class="hint">HeroSMS 必填，例如 16；豪猪可留空</span></label><input name="country" id="p_country" class="input-modern" placeholder="16"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">最高上游价格(USD) <span class="hint">HeroSMS 可填，取号时只接受不超过该价格的号码；填 0 表示不限制</span></label><input name="upstream_price_limit_usd" id="p_upstream_price_limit_usd" type="number" step="0.0001" class="input-modern" value="0"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游成本(元) <span class="hint">从 HeroSMS 查询结果带入，用于参考或自动定价</span></label><input name="base_price" id="p_base_price" type="number" step="0.01" class="input-modern" value="0"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">前台售价(元/次) <span class="hint">填 0 时按上游成本 + 渠道加价%</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">分类</label><input name="category" id="p_category" class="input-modern" placeholder="如：AI、社交、金融"></div>
@@ -76,6 +78,7 @@ function fillProject(data) {
     document.getElementById('p_channel_id').value = data.channel_id || '';
     document.getElementById('p_sid').value = data.sid || '';
     document.getElementById('p_country').value = data.country || '';
+    document.getElementById('p_upstream_price_limit_usd').value = data.upstream_price_limit_usd || '0';
     document.getElementById('p_base_price').value = data.base_price || '0';
     document.getElementById('p_price').value = data.price || '0';
     document.getElementById('p_category').value = data.category || '';
@@ -123,6 +126,7 @@ async function deleteProject(id) {
         channel_id: params.get('channel_id') || '',
         sid: params.get('sid') || '',
         country: params.get('country') || '',
+        upstream_price_limit_usd: params.get('upstream_price_limit_usd') || '0',
         base_price: params.get('base_price') || '0',
         price: params.get('price') || '0',
         name: params.get('name') || '',

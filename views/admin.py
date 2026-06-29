@@ -447,11 +447,12 @@ def add_project():
 
     try:
 
-        db.execute("""INSERT INTO projects (name, channel_id, sid, country, base_price, price, description, category, icon, color)
-                      VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        db.execute("""INSERT INTO projects (name, channel_id, sid, country, upstream_price_limit_usd, base_price, price, description, category, icon, color)
+                      VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                    (request.form['name'], request.form['channel_id'], request.form['sid'],
-                    request.form.get('country', '').strip(), float(request.form.get('base_price') or 0),
-                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''),
+                    request.form.get('country', '').strip(), float(request.form.get('upstream_price_limit_usd') or 0),
+                    float(request.form.get('base_price') or 0), float(request.form['price']),
+                    request.form.get('description', ''), request.form.get('category', ''),
                     request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
 
         db.commit()
@@ -478,12 +479,13 @@ def edit_project(id):
 
     try:
 
-        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, country=?, base_price=?, price=?,
-                      description=?, category=?, icon=?, color=?
+        db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, country=?, upstream_price_limit_usd=?,
+                      base_price=?, price=?, description=?, category=?, icon=?, color=?
                       WHERE id=?""",
                    (request.form['name'], request.form['channel_id'], request.form['sid'],
-                    request.form.get('country', '').strip(), float(request.form.get('base_price') or 0),
-                    float(request.form['price']), request.form.get('description', ''), request.form.get('category', ''),
+                    request.form.get('country', '').strip(), float(request.form.get('upstream_price_limit_usd') or 0),
+                    float(request.form.get('base_price') or 0), float(request.form['price']),
+                    request.form.get('description', ''), request.form.get('category', ''),
                     request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
 
         db.commit()

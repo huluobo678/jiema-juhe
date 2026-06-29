@@ -13,8 +13,9 @@ user_bp = Blueprint('user', __name__)
 
 def project_service(project):
     country = project['country'] if 'country' in project.keys() else ''
-    if country:
-        return {'sid': project['sid'], 'country': country}
+    price_limit = project['upstream_price_limit_usd'] if 'upstream_price_limit_usd' in project.keys() else 0
+    if country or price_limit:
+        return {'sid': project['sid'], 'country': country, 'max_price': price_limit}
     return project['sid']
 
 def row_value(row, key, default=''):
