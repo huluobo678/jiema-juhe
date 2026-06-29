@@ -3,6 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
+from email.utils import formataddr
 from models import get_db
 import os
 
@@ -33,8 +34,8 @@ def send_email(to_address, subject, html_body):
 
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = Header(subject, 'utf-8')
-        msg['From'] = f"{from_name} <{user}>"
+        msg['Subject'] = str(Header(subject, 'utf-8'))
+        msg['From'] = formataddr((Header(from_name, 'utf-8').encode(), user))
         msg['To'] = to_address
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
 
@@ -47,7 +48,7 @@ def send_email(to_address, subject, html_body):
         return (False, f'发送失败: {e}')
 
 def send_verify_code(to_address, code):
-    subject = '【云枢智联】邮箱验证'
+    subject = '【云枢速联】邮箱验证'
     body = '<div style="max-width:480px;margin:0 auto;padding:24px;font-family:sans-serif;">'
     body += '<h2 style="color:#059669;">验证您的邮箱</h2>'
     body += '<p>您的验证码：</p>'
