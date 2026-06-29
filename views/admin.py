@@ -449,7 +449,7 @@ def add_project():
 
         db.execute("""INSERT INTO projects (name, channel_id, sid, country, location, upstream_price_limit_usd, base_price, base_price_type, price, description, category, icon, color)
                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                   (request.form['name'], request.form['channel_id'], request.form['sid'],
+                   (request.form['name'], request.form['channel_id'], request.form.get('sid', '').strip(),
                     request.form.get('country', '').strip(), request.form.get('location', '').strip(),
                     float(request.form.get('upstream_price_limit_usd') or 0), float(request.form.get('base_price') or 0),
                     request.form.get('base_price_type', 'auto'), float(request.form['price']),
@@ -483,7 +483,7 @@ def edit_project(id):
         db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, country=?, location=?, upstream_price_limit_usd=?,
                       base_price=?, base_price_type=?, price=?, description=?, category=?, icon=?, color=?
                       WHERE id=?""",
-                   (request.form['name'], request.form['channel_id'], request.form['sid'],
+                   (request.form['name'], request.form['channel_id'], request.form.get('sid', '').strip(),
                     request.form.get('country', '').strip(), request.form.get('location', '').strip(),
                     float(request.form.get('upstream_price_limit_usd') or 0), float(request.form.get('base_price') or 0),
                     request.form.get('base_price_type', 'auto'), float(request.form['price']),
@@ -911,7 +911,8 @@ def hero_services():
         {'id': '1', 'name': '印度/India'},
     ]
     country = request.args.get('country', '16').strip() or '16'
-    search = request.args.get('search', '').strip().lower()
+    search_raw = request.args.get('search', '').strip()
+    search = search_raw.lower()
     try:
         exchange_rate = float(request.args.get('rate', 7.25))
     except (TypeError, ValueError):
@@ -920,6 +921,17 @@ def hero_services():
     def suggested_price(cost):
         cost = float(cost or 0)
         return round(max(cost * 1.3, cost + 0.5), 2)
+
+    def normalize_term(value):
+        return ''.join(str(value or '').lower().split())
+
+    def service_matches(sid, name):
+        if not search:
+            return True
+        terms = {sid.lower(), normalize_term(sid), name.lower(), normalize_term(name)}
+        if search in ('any other', 'anyother', 'other', '其他', 'aw', 'an'):
+            terms.update({'anyother', 'any other', 'other', '其他', 'aw', 'an'})
+        return search in terms or normalize_term(search) in terms or any(search in term for term in terms)
 
     context = {
         'services': [],
@@ -970,7 +982,7 @@ def hero_services():
                 'price_cny': round(cost_usd * exchange_rate, 2),
                 'stock': info.get('count', info.get('quantity', 0)),
             }
-            if not search or search in sid.lower() or search in name.lower():
+            if service_matches(sid, name):
                 services.append(item)
 
         context['services'] = sorted(services, key=lambda s: s['sid'])

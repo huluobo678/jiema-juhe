@@ -26,6 +26,12 @@ def format_phone(phone: str, channel_name: str = "") -> str:
     if not digits:
         return phone
     
+    # HaoZhuMa domestic mobile numbers are already normalized.
+    # Keep 11-digit China mobile numbers unchanged instead of treating them as +1.
+    channel_key = (channel_name or '').lower()
+    if 'herosms' not in channel_key and len(digits) == 11 and digits.startswith('1') and digits[1] in '3456789':
+        return digits
+
     # ---------- HeroSMS international numbers ----------
     if digits.startswith('44') and len(digits) >= 11:
         # UK: 44 + area + local

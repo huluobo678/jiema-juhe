@@ -24,6 +24,12 @@ def row_value(row, key, default=''):
         return row[key]
     return default
 
+def session_channel_meta(db, session_row):
+    channel = db.execute("SELECT name, channel_type FROM channels WHERE id=?", (session_row['channel_id'],)).fetchone()
+    channel_name = row_value(channel, 'name')
+    channel_type = row_value(channel, 'channel_type', 'haozhuma')
+    return channel_name, channel_type
+
 @user_bp.route('/')
 def index():
     """首页 - 项目选择"""
@@ -213,6 +219,9 @@ def start_order():
     if not acc or not project:
         db.close()
         return jsonify({'ok': False, 'msg': '项目不存在，请联系管理员'})
+    if not row_value(project, 'sid'):
+        db.close()
+        return jsonify({'ok': False, 'msg': '项目未配置上游服务代码，请联系管理员'})
 
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
@@ -289,6 +298,9 @@ def start_order_by_number():
     if not acc or not project:
         db.close()
         return jsonify({'ok': False, 'msg': '项目不存在，请联系管理员'})
+    if not row_value(project, 'sid'):
+        db.close()
+        return jsonify({'ok': False, 'msg': '项目未配置上游服务代码，请联系管理员'})
 
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
@@ -366,8 +378,9 @@ def api_sms(view_token):
         return jsonify({'ok': False, 'msg': '无权访问此会话'})
 
     if s['status'] == 'received':
+        channel_name, channel_type = session_channel_meta(db, s)
         db.close()
-        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
+        return jsonify({'ok': True, 'code': s['code'], 'sms': s['sms_content'], 'phone': s['phone'], 'formatted_phone': format_phone(s['phone'], channel_name), 'channel_type': channel_type})
 
     # 从注册中心获取渠道实例（避免重复实例化）
     ch = get_channel_registry().get(s['channel_id'])
@@ -421,10 +434,10 @@ def api_sms(view_token):
         if cur.rowcount != 1:
             db2.rollback()
             db2.close()
-            return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
+            return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'formatted_phone': format_phone(s['phone'], row_value(channel, 'name')), 'channel_type': row_value(channel, 'channel_type', 'haozhuma')})
         db2.commit()
         db2.close()
-        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'channel_type': row_value(s, 'channel_type')})
+        return jsonify({'ok': True, 'code': code, 'sms': sms_content, 'phone': s['phone'], 'formatted_phone': format_phone(s['phone'], row_value(channel, 'name')), 'channel_type': row_value(channel, 'channel_type', 'haozhuma')})
 
     err_msg = data.get('msg') or ''
     if '余额' in err_msg or '余额不足' in err_msg:
