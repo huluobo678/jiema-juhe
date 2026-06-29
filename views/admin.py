@@ -902,14 +902,6 @@ def hero_services():
     import urllib.parse
     import urllib.request
 
-    countries = [
-        {'id': '16', 'name': '英国/England'},
-        {'id': '22', 'name': '美国/USA'},
-        {'id': '7', 'name': '俄罗斯/Russia'},
-        {'id': '44', 'name': '立陶宛/Lithuania'},
-        {'id': '48', 'name': '荷兰/Netherlands'},
-        {'id': '1', 'name': '印度/India'},
-    ]
     country = request.args.get('country', '16').strip() or '16'
     search_raw = request.args.get('search', '').strip()
     search = search_raw.lower()
@@ -935,6 +927,38 @@ def hero_services():
         if normalized_search in ('anyother', 'other', '其他', 'ot', 'aw', 'an'):
             return sid_key in ('ot', 'aw', 'an') or 'any other' in name_key or 'anyother' in normalized_name or 'other service' in name_key or '其他' in name_key
         return search in sid_key or search in name_key or normalized_search in normalize_term(sid) or normalized_search in normalized_name
+
+    def fallback_countries():
+        return [
+            {'id': '16', 'name': 'United Kingdom'},
+            {'id': '22', 'name': 'United States'},
+            {'id': '7', 'name': 'Malaysia'},
+            {'id': '44', 'name': 'Lithuania'},
+            {'id': '48', 'name': 'Netherlands'},
+            {'id': '1', 'name': 'Ukraine'},
+        ]
+
+    def fetch_countries(api_url, api_key):
+        params = urllib.parse.urlencode({'api_key': api_key, 'action': 'getCountries'})
+        req = urllib.request.Request(f'{api_url}?{params}', headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode('utf-8', errors='replace')
+        data = json_module.loads(raw)
+        countries = []
+        for cid, info in data.items():
+            if not isinstance(info, dict):
+                continue
+            visible = int(info.get('visible', 1) or 0)
+            if visible != 1:
+                continue
+            eng = str(info.get('eng') or '').strip()
+            chn = str(info.get('chn') or '').strip()
+            display = eng or chn or f'Country {cid}'
+            countries.append({'id': str(info.get('id') or cid), 'name': display})
+        countries.sort(key=lambda item: int(item['id']) if str(item['id']).isdigit() else 999999)
+        return countries or fallback_countries()
+
+    countries = fallback_countries()
 
     context = {
         'services': [],
@@ -963,6 +987,11 @@ def hero_services():
     context['channel_name'] = ch['name']
     api_key = ch['token'] or ch['api_user'] or ch['api_pass'] or ''
     api_url = (ch['api_url'] or 'https://hero-sms.com/stubs/handler_api.php').rstrip('/')
+    try:
+        countries = fetch_countries(api_url, api_key)
+        context['countries'] = countries
+    except Exception:
+        context['countries'] = fallback_countries()
     params = urllib.parse.urlencode({'api_key': api_key, 'action': 'getPrices', 'country': country})
 
     try:

@@ -24,7 +24,7 @@
     </div>
     <div style="flex:1;min-width:220px">
         <label>服务代码或名称</label>
-        <input class="input-modern" type="text" name="search" value="{{ search }}" placeholder="例如 tg、telegram、腾讯、yuanbao">
+        <input class="input-modern" type="text" name="search" value="{{ search }}" placeholder="例如 Any other、Telegram、Google、tg">
     </div>
     <button class="btn-modern btn-primary-modern" type="submit">查询</button>
     <a class="btn-modern btn-outline-modern" href="/admin/projects" style="text-decoration:none">返回项目</a>
@@ -32,7 +32,7 @@
 
 {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
 
-<div class="muted" style="margin-bottom:10px">当前渠道：{{ channel_name or '-' }}；共 {{ services|length }} 个结果</div>
+<div class="muted" style="margin-bottom:10px">当前渠道：{{ channel_name or '-' }}；已加载 {{ countries|length }} 个国家；共 {{ services|length }} 个结果</div>
 <table class="table-modern">
     <thead><tr><th>服务代码</th><th>服务名称</th><th>国家</th><th>价格 USD</th><th>成本 RMB</th><th>库存</th><th>操作</th></tr></thead>
     <tbody>
