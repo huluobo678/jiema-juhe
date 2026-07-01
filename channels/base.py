@@ -14,6 +14,7 @@ class ChannelBase(ABC):
         self.fail_count = 0   # 连续失败次数
         self.concurrency = 0  # 当前并发请求数
         self.max_concurrency = int(config.get('concurrent_limit', 5))
+        self.vip_only = bool(int(config.get('vip_only') or 0))
         self._lock = threading.Lock()
     
     @abstractmethod

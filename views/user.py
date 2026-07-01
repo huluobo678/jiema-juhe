@@ -128,7 +128,8 @@ def balance():
     db = get_db()
     acc = db.execute("SELECT balance FROM accounts WHERE token=?", (account_token,)).fetchone()
     db.close()
-    return jsonify({'ok': True, 'balance': acc['balance'] if acc else 0})
+    balance_value = float(acc['balance'] if acc else 0)
+    return jsonify({'ok': True, 'balance': balance_value, 'balance_text': f'{balance_value:.2f}'})
 
 @user_bp.route('/announcements')
 @user_bp.route('/user/announcements')
@@ -249,9 +250,13 @@ def start_order():
     if float(acc['balance']) < total_price:
         db.close()
         return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
+    is_vip = bool(row_value(acc, 'is_vip', 0))
+    if ch_row and row_value(ch_row, 'vip_only', 0) and not is_vip:
+        db.close()
+        return jsonify({'ok': False, 'msg': '该项目当前走 VIP 专用通道，请联系管理员开通 VIP'})
 
     # ====== 智能调度器选渠道 ======
-    ch = smart_scheduler.pick_channel(project)
+    ch = smart_scheduler.pick_channel(project, is_vip=is_vip)
     if ch is None:
         db.close()
         return jsonify({'ok': False, 'msg': '所有渠道繁忙或不可用，请稍后再试'})
@@ -328,6 +333,7 @@ def start_order_by_number():
     if float(acc['balance']) < total_price:
         db.close()
         return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
+    is_vip = bool(row_value(acc, 'is_vip', 0))
 
     # ====== 锁定到项目绑定的渠道 ======
     ch = get_channel_registry().get(project['channel_id'])
@@ -340,6 +346,9 @@ def start_order_by_number():
     if ch is None:
         db.close()
         return jsonify({'ok': False, 'msg': '渠道不可用'})
+    if getattr(ch, 'vip_only', False) and not is_vip:
+        db.close()
+        return jsonify({'ok': False, 'msg': '该项目当前走 VIP 专用通道，请联系管理员开通 VIP'})
 
     if not ch.acquire():
         db.close()

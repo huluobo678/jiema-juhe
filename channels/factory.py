@@ -23,6 +23,7 @@ def create_channel_adapter(db_row) -> ChannelBase | None:
         'api_pass': _g(db_row, 'api_pass', ''),
         'token': _g(db_row, 'token', ''),
         'concurrent_limit': _g(db_row, 'concurrent_limit', 5),
+        'vip_only': _g(db_row, 'vip_only', 0),
         'channel_id': cid,
     }
 

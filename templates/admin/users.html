@@ -3,11 +3,11 @@
 {% block content %}
 <div class="page-header">
     <h2>用户管理</h2>
-    <p>管理用户账号、余额</p>
+    <p>管理用户账号、余额、邮箱验证和 VIP 状态</p>
 </div>
 
 <form method="get" style="margin-bottom:20px">
-    <div style="display:flex;gap:8px;max-width:400px">
+    <div style="display:flex;gap:8px;max-width:460px">
         <input type="text" name="q" class="input-modern" placeholder="搜索 token / 邮箱..." value="{{ q }}">
         <button class="btn-modern btn-primary-modern" type="submit">搜索</button>
         {% if q %}<a href="/admin/users" class="btn-modern btn-outline-modern" style="display:inline-flex;align-items:center;text-decoration:none">清除</a>{% endif %}
@@ -15,22 +15,39 @@
 </form>
 
 <table class="table-modern">
-    <thead><tr><th>ID</th><th>Token</th><th>余额</th><th>邮箱</th><th>验证</th><th>并发</th><th>创建时间</th></tr></thead>
+    <thead><tr><th>ID</th><th>Token</th><th>余额</th><th>邮箱</th><th>验证</th><th>VIP</th><th>并发</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody>
     {% for a in accounts %}
     <tr>
         <td>{{ a.id }}</td>
         <td><code style="font-size:0.75rem">{{ a.token[:16] }}...</code></td>
-        <td><strong>{{ a.balance }}</strong> 元</td>
+        <td><strong>{{ '%.2f'|format(a.balance or 0) }}</strong> 元</td>
         <td>{{ a.email or '-' }}</td>
-        <td>{{ '✅' if a.email_verified else '❌' }}</td>
+        <td>{{ '已验证' if a.email_verified else '未验证' }}</td>
+        <td>{% if a.is_vip %}<span style="color:#1d4ed8;font-weight:700">VIP</span>{% else %}<span style="color:#94a3b8">普通</span>{% endif %}</td>
         <td>{{ a.concurrent_limit }}</td>
         <td>{{ a.created_at }}</td>
+        <td>
+            {% if a.is_vip %}
+            <button class="btn-modern" style="padding:4px 10px;font-size:0.8rem;background:#64748b;color:white" onclick="setVip({{ a.id }}, 0)">取消VIP</button>
+            {% else %}
+            <button class="btn-modern btn-primary-modern" style="padding:4px 10px;font-size:0.8rem" onclick="setVip({{ a.id }}, 1)">设为VIP</button>
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
     {% if not accounts %}
-    <tr><td colspan="7" style="text-align:center;color:#94a3b8">暂无用户</td></tr>
+    <tr><td colspan="9" style="text-align:center;color:#94a3b8">暂无用户</td></tr>
     {% endif %}
     </tbody>
 </table>
+<script>
+async function setVip(id, value) {
+    if (!confirm(value ? '确定将该用户设为 VIP？' : '确定取消该用户 VIP？')) return;
+    const r = await fetch('/admin/users/' + id + '/vip', {method:'POST', body:new URLSearchParams({is_vip: value})});
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else alert(d.msg || '操作失败');
+}
+</script>
 {% endblock %}

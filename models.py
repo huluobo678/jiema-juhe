@@ -18,6 +18,10 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
+        conn.execute("ALTER TABLE channels ADD COLUMN vip_only INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    try:
         conn.execute("ALTER TABLE accounts ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
     except Exception:
         pass
@@ -35,6 +39,10 @@ def _migrate_upgrade(conn):
         pass
     try:
         conn.execute("ALTER TABLE accounts ADD COLUMN password_hash TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN is_vip INTEGER DEFAULT 0")
     except Exception:
         pass
     try:
@@ -120,6 +128,7 @@ def init_db():
             enabled INTEGER DEFAULT 1,
             markup_percent REAL DEFAULT 0,       -- 加价百分比
             concurrent_limit INTEGER DEFAULT 5, -- 并发上限
+            vip_only INTEGER DEFAULT 0,          -- VIP专用通道
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 
@@ -161,6 +170,7 @@ def init_db():
             email TEXT,
             email_verified INTEGER DEFAULT 0,
             password_hash TEXT DEFAULT '',
+            is_vip INTEGER DEFAULT 0,            -- VIP用户标记
             referred_by TEXT,                      -- 推荐人token
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );

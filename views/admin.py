@@ -17,6 +17,26 @@ import functools
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+def refresh_runtime_channel(channel_id):
+    from channels import get_registry
+    from channels.factory import create_channel_adapter
+    db = get_db()
+    row = db.execute("SELECT * FROM channels WHERE id=?", (channel_id,)).fetchone()
+    db.close()
+    registry = get_registry()
+    registry.unregister(channel_id)
+    if not row or not row['enabled']:
+        return
+    adapter = create_channel_adapter(row)
+    if not adapter:
+        return
+    if hasattr(adapter, 'login'):
+        try:
+            adapter.login()
+        except Exception:
+            pass
+    registry.register(adapter)
+
 
 
 def login_required(f):
@@ -122,6 +142,7 @@ def add_channel():
     markup_percent = float(request.form.get('markup_percent', 0))
 
     channel_type = request.form.get('channel_type', 'haozhuma')
+    vip_only = 1 if request.form.get('vip_only') == '1' else 0
 
     db = get_db()
 
@@ -129,9 +150,10 @@ def add_channel():
 
         cl = int(request.form.get('concurrent_limit', 5))
 
-        db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit, channel_type) VALUES (?,?,?,?,?,?,?)",
-        (name, api_url, api_user, api_pass, markup_percent, cl, channel_type))
+        cur = db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit, channel_type, vip_only) VALUES (?,?,?,?,?,?,?,?)",
+        (name, api_url, api_user, api_pass, markup_percent, cl, channel_type, vip_only))
         db.commit()
+        channel_id = cur.lastrowid
 
     except Exception as e:
 
@@ -140,6 +162,7 @@ def add_channel():
         return jsonify({'ok': False, 'msg': str(e)})
 
     db.close()
+    refresh_runtime_channel(channel_id)
 
     return jsonify({'ok': True})
 
@@ -236,6 +259,7 @@ def edit_channel(id):
     token = request.form.get('token', '')
 
     channel_type = request.form.get('channel_type', 'haozhuma')
+    vip_only = 1 if request.form.get('vip_only') == '1' else 0
 
     markup_percent = float(request.form.get('markup_percent', 0))
 
@@ -243,15 +267,16 @@ def edit_channel(id):
 
     cl = int(request.form.get('concurrent_limit', 5))
 
-    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?, concurrent_limit=?
+    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?, concurrent_limit=?, vip_only=?
 
                    WHERE id=?""",
 
-               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, cl, id))
+               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, cl, vip_only, id))
 
     db.commit()
 
     db.close()
+    refresh_runtime_channel(id)
 
     return jsonify({'ok': True})
 
@@ -292,6 +317,7 @@ def toggle_channel(id):
     db.commit()
 
     db.close()
+    refresh_runtime_channel(id)
 
     return jsonify({'ok': True})
 
@@ -310,6 +336,8 @@ def delete_channel(id):
     db.commit()
 
     db.close()
+    from channels import get_registry
+    get_registry().unregister(id)
 
     return jsonify({'ok': True})
 
@@ -400,6 +428,7 @@ def channels_status():
         'concurrent': c.concurrency,
 
         'concurrent_limit': c.max_concurrency,
+        'vip_only': getattr(c, 'vip_only', False),
 
         'last_ping': '-',
 
@@ -775,6 +804,18 @@ def users():
     db.close()
 
     return render_template('admin/users.html', accounts=rows, q=q)
+
+@admin_bp.route('/users/<int:id>/vip', methods=['POST'])
+@login_required
+def toggle_user_vip(id):
+    is_vip = 1 if request.form.get('is_vip') == '1' else 0
+    db = get_db()
+    cur = db.execute("UPDATE accounts SET is_vip=? WHERE id=?", (is_vip, id))
+    db.commit()
+    db.close()
+    if cur.rowcount != 1:
+        return jsonify({'ok': False, 'msg': '用户不存在'})
+    return jsonify({'ok': True})
 
 
 @admin_bp.route('/transactions')

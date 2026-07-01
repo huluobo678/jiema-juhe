@@ -14,37 +14,39 @@ class SmartScheduler:
             value = getattr(project, 'channel_id', None)
         return int(value) if value is not None else None
 
-    def _available(self, channel, exclude_ids: set) -> bool:
+    def _available(self, channel, exclude_ids: set, is_vip: bool = False) -> bool:
         if channel is None:
             return False
         if channel.channel_id in exclude_ids:
+            return False
+        if getattr(channel, 'vip_only', False) and not is_vip:
             return False
         if channel.is_dead():
             return False
         return circuit_registry.get(f'channel:{channel.name}').allow_request()
 
-    def pick_channel(self, project, exclude_ids: set = None):
+    def pick_channel(self, project, exclude_ids: set = None, is_vip: bool = False):
         """Pick the channel bound to the project, falling back only when no binding exists."""
         exclude_ids = exclude_ids or set()
         channel_id = self._project_channel_id(project)
         if channel_id is not None:
             channel = channel_registry.get(channel_id)
-            return channel if self._available(channel, exclude_ids) else None
+            return channel if self._available(channel, exclude_ids, is_vip) else None
 
         candidates = []
         for channel in channel_registry.get_all_alive():
-            if self._available(channel, exclude_ids):
+            if self._available(channel, exclude_ids, is_vip):
                 candidates.append((channel.concurrency, channel))
         if not candidates:
             return None
         candidates.sort(key=lambda item: item[0])
         return candidates[0][1]
 
-    def pick_channel_for_project(self, project_channels, exclude_ids: set = None):
+    def pick_channel_for_project(self, project_channels, exclude_ids: set = None, is_vip: bool = False):
         exclude_ids = exclude_ids or set()
         for pc in project_channels:
             channel = channel_registry.get(pc['channel_id'])
-            if not self._available(channel, exclude_ids):
+            if not self._available(channel, exclude_ids, is_vip):
                 continue
             if not channel.acquire():
                 continue
@@ -70,6 +72,7 @@ class SmartScheduler:
                 'alive': channel.alive,
                 'concurrency': channel.concurrency,
                 'max_concurrency': channel.max_concurrency,
+                'vip_only': getattr(channel, 'vip_only', False),
                 'circuit_state': circuit['state'],
                 'fail_rate': round(circuit['fail_rate'] * 100, 1),
             })

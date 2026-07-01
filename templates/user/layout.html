@@ -145,12 +145,15 @@ function toggleSub(btn) {
 
 function refreshBalance() {
     fetch('/balance').then(function(r){return r.json()}).then(function(d){
-        if(d.ok) document.getElementById('topBalance').textContent = '¥' + d.balance;
+        var el = document.getElementById('topBalance');
+        if(d.ok && el) el.textContent = '¥' + (d.balance_text || Number(d.balance || 0).toFixed(2));
     });
 }
 
 // 高亮当前菜单 + 展开子菜单
 document.addEventListener('DOMContentLoaded', function() {
+    refreshBalance();
+    setInterval(refreshBalance, 5000);
     var path = window.location.pathname;
     // 匹配 <a> 标签
     document.querySelectorAll('.sidebar a').forEach(function(a) {
@@ -179,6 +182,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) refreshBalance();
+});
+window.addEventListener('focus', refreshBalance);
 </script>
 {% block scripts %}{% endblock %}
 </body>

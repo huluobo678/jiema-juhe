@@ -11,63 +11,60 @@
 {% endblock %}
 {% block content %}
 <h3>渠道管理</h3>
-<p style="color:var(--text-muted);margin-bottom:16px">管理接码渠道，配置API登录信息</p>
+<p style="color:var(--text-muted);margin-bottom:16px">管理接码渠道、API 登录信息、加价和 VIP 专用通道</p>
 
-        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-            <button class="btn-modern btn-primary-modern" onclick="showAdd()">+ 添加渠道</button>
-            <button class="btn-modern btn-outline-modern" onclick="refreshBalance()" id="refreshBtn">🔄 刷新余额</button>
-            <span id="refreshStatus" style="font-size:0.85rem;color:#64748b;align-self:center"></span>
-        </div>
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn-modern btn-primary-modern" onclick="showAdd()">+ 添加渠道</button>
+    <button class="btn-modern btn-outline-modern" onclick="refreshBalance()" id="refreshBtn">刷新余额</button>
+    <span id="refreshStatus" style="font-size:0.85rem;color:#64748b;align-self:center"></span>
+</div>
 
-        <table class="table-modern" style="width:100%">
-            <thead><tr>
-                <th style="background:#1e293b;color:white;padding:10px 14px">ID</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">名称</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">类型</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">API地址</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">上游余额</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">并发</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">加价%</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">状态</th>
-                <th style="background:#1e293b;color:white;padding:10px 14px">操作</th>
-            </tr></thead>
-            <tbody>
-            {% for ch in channels %}
-            <tr id="ch-row-{{ ch.id }}">
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.id }}</td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>{{ ch.name }}</strong></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><span class="tag tag-blue">{{ ch.channel_type or 'haozhuma' }}</span></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;max-width:200px;overflow:hidden;text-overflow:ellipsis"><code>{{ ch.api_url }}</code></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:700" class="balance-cell" data-id="{{ ch.id }}" data-name="{{ ch.name }}">加载中...</td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.concurrent_limit or 5 }}</td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.markup_percent or 0 }}%</td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">
-                    {% if ch.enabled %}
-                    <span class="tag tag-green">启用</span>
-                    {% else %}
-                    <span class="tag tag-red">禁用</span>
-                    {% endif %}
-                </td>
-                <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">
-                    <div style="display:flex;gap:6px;flex-wrap:wrap">
-                        <button class="btn-modern btn-primary-modern" style="padding:4px 12px;font-size:0.8rem" onclick="testLogin({{ ch.id }})">测试登录</button>
-                        <button class="btn-modern btn-outline-modern" style="padding:4px 12px;font-size:0.8rem" onclick="showEdit({{ ch.id }})">编辑</button>
-                        {% if ch.enabled %}
-                        <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#f59e0b;color:white" onclick="toggleChannel({{ ch.id }}, 0)">禁用</button>
-                        {% else %}
-                        <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#22c55e;color:white" onclick="toggleChannel({{ ch.id }}, 1)">启用</button>
-                        {% endif %}
-                        <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#ef4444;color:white" onclick="deleteChannel({{ ch.id }})">删除</button>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:30px">暂无渠道，点击「添加渠道」创建</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+<table class="table-modern" style="width:100%">
+    <thead><tr>
+        <th style="background:#1e293b;color:white;padding:10px 14px">ID</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">名称</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">类型</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">API 地址</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">上游余额</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">并发</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">加价%</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">VIP</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">状态</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">操作</th>
+    </tr></thead>
+    <tbody>
+    {% for ch in channels %}
+    <tr id="ch-row-{{ ch.id }}">
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.id }}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><strong>{{ ch.name }}</strong></td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0"><span class="tag tag-blue">{{ ch.channel_type or 'haozhuma' }}</span></td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;max-width:200px;overflow:hidden;text-overflow:ellipsis"><code>{{ ch.api_url }}</code></td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:700" class="balance-cell" data-id="{{ ch.id }}" data-name="{{ ch.name }}">加载中...</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.concurrent_limit or 5 }}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.markup_percent or 0 }}%</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{% if ch.vip_only %}<span class="tag tag-blue">VIP专用</span>{% else %}<span style="color:#94a3b8">普通</span>{% endif %}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">
+            {% if ch.enabled %}<span class="tag tag-green">启用</span>{% else %}<span class="tag tag-red">禁用</span>{% endif %}
+        </td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn-modern btn-primary-modern" style="padding:4px 12px;font-size:0.8rem" onclick="testLogin({{ ch.id }})">测试登录</button>
+                <button class="btn-modern btn-outline-modern" style="padding:4px 12px;font-size:0.8rem" onclick="showEdit({{ ch.id }})">编辑</button>
+                {% if ch.enabled %}
+                <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#f59e0b;color:white" onclick="toggleChannel({{ ch.id }}, 0)">禁用</button>
+                {% else %}
+                <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#22c55e;color:white" onclick="toggleChannel({{ ch.id }}, 1)">启用</button>
+                {% endif %}
+                <button class="btn-modern" style="padding:4px 12px;font-size:0.8rem;background:#ef4444;color:white" onclick="deleteChannel({{ ch.id }})">删除</button>
+            </div>
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px">暂无渠道，点击“添加渠道”创建</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
 
-<!-- 添加弹窗 -->
 <div class="modal-modern" id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center">
     <div style="background:white;border-radius:12px;width:520px;max-width:90vw;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)">
         <div style="background:#1e293b;color:white;padding:16px 24px;border-radius:12px 12px 0 0">
@@ -76,7 +73,7 @@
         <div style="padding:24px">
             <form id="channelForm">
                 <input type="hidden" name="id" id="chId" value="">
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道名称</label><input name="name" id="chName" class="input-modern" required placeholder="如：豪猪"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道名称</label><input name="name" id="chName" class="input-modern" required placeholder="如：豪猪VIP"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">渠道类型</label>
                     <select name="channel_type" id="chType" class="input-modern">
                         <option value="haozhuma">豪猪 (haozhuma)</option>
@@ -84,12 +81,13 @@
                         <option value="other">其他</option>
                     </select>
                 </div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API地址</label><input name="api_url" id="chApi" class="input-modern" placeholder="https://api.haozhuma.com"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API用户名</label><input name="api_user" id="chUser" class="input-modern"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API密码</label><input name="api_pass" id="chPass" type="password" class="input-modern"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">Token <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(通过测试登录自动获取)</span></label><input name="token" id="chToken" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API 地址</label><input name="api_url" id="chApi" class="input-modern" placeholder="https://api.haozhuma.com"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API 用户名</label><input name="api_user" id="chUser" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API 密码</label><input name="api_pass" id="chPass" type="password" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">Token <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">测试登录后可自动获取</span></label><input name="token" id="chToken" class="input-modern"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">加价百分比</label><input name="markup_percent" id="chMarkup" type="number" step="0.1" value="0" class="input-modern"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">并发上限 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(同时取号人数)</span></label><input name="concurrent_limit" id="chConcur" type="number" min="1" value="5" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">并发上限 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">同时取号人数</span></label><input name="concurrent_limit" id="chConcur" type="number" min="1" value="5" class="input-modern"></div>
+                <label class="mb-3" style="display:flex;align-items:center;gap:8px;font-weight:600;color:#0f172a"><input type="checkbox" name="vip_only" id="chVipOnly" value="1"> VIP专用通道</label>
             </form>
         </div>
         <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
@@ -111,6 +109,7 @@ function showAdd() {
     document.getElementById('chToken').value = '';
     document.getElementById('chMarkup').value = '0';
     document.getElementById('chConcur').value = '5';
+    document.getElementById('chVipOnly').checked = false;
     document.getElementById('addModal').style.display = 'flex';
 }
 
@@ -144,6 +143,7 @@ async function showEdit(id) {
     document.getElementById('chToken').value = ch.token || '';
     document.getElementById('chMarkup').value = ch.markup_percent || 0;
     document.getElementById('chConcur').value = ch.concurrent_limit || 5;
+    document.getElementById('chVipOnly').checked = !!Number(ch.vip_only || 0);
     document.getElementById('addModal').style.display = 'flex';
 }
 
@@ -151,15 +151,15 @@ async function testLogin(id) {
     const r = await fetch('/admin/channels/'+id+'/test-login', {method:'POST'});
     const d = await r.json();
     if (d.ok) {
-        alert('✅ 登录成功！\n'+d.msg);
+        alert('登录成功：\n' + d.msg);
         refreshBalance();
     } else {
-        alert('❌ ' + d.msg);
+        alert(d.msg);
     }
 }
 
 async function toggleChannel(id, enable) {
-    if (!confirm('确定要'+(enable?'启用':'禁用')+'该渠道吗？')) return;
+    if (!confirm('确定要' + (enable ? '启用' : '禁用') + '该渠道吗？')) return;
     const r = await fetch('/admin/channels/'+id+'/toggle', {method:'POST', body:new URLSearchParams({enabled: enable})});
     const d = await r.json();
     if (d.ok) { location.reload(); }
@@ -175,21 +175,25 @@ async function deleteChannel(id) {
 }
 
 async function refreshBalance() {
-    document.getElementById('refreshBtn').disabled = true;
-    document.getElementById('refreshStatus').textContent = '⏳ 刷新中...';
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    document.getElementById('refreshStatus').textContent = '刷新中...';
     document.querySelectorAll('.balance-cell').forEach(c => c.textContent = '...');
-    const r = await fetch('/admin/channel-balances');
-    const d = await r.json();
-    if (!d.ok) { document.getElementById('refreshStatus').textContent = '❌ '+d.msg; return; }
-    for (const b of d.balances) {
-        const cell = document.querySelector('.balance-cell[data-id="'+b.id+'"]');
-        if (cell) {
-            cell.textContent = '¥' + b.balance.toFixed(2);
-            cell.style.color = b.balance > 0 ? '#059669' : '#ef4444';
+    try {
+        const r = await fetch('/admin/channel-balances');
+        const d = await r.json();
+        if (!d.ok) { document.getElementById('refreshStatus').textContent = d.msg; return; }
+        for (const b of d.balances) {
+            const cell = document.querySelector('.balance-cell[data-id="'+b.id+'"]');
+            if (cell) {
+                cell.textContent = '¥' + Number(b.balance || 0).toFixed(2);
+                cell.style.color = b.balance > 0 ? '#059669' : '#ef4444';
+            }
         }
+        document.getElementById('refreshStatus').textContent = new Date().toLocaleTimeString();
+    } finally {
+        btn.disabled = false;
     }
-    document.getElementById('refreshStatus').textContent = '✅ ' + new Date().toLocaleTimeString();
-    document.getElementById('refreshBtn').disabled = false;
 }
 
 refreshBalance();
