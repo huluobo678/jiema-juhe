@@ -1083,7 +1083,7 @@ def hero_services():
             item = {
                 'sid': sid,
                 'name': name,
-                'price_usd': cost_usd,
+                'price_usd': round(cost_usd, 4),
                 'price_cny': round(cost_usd * exchange_rate, 2),
                 'stock': info.get('count', info.get('quantity', 0)),
             }

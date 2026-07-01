@@ -60,7 +60,9 @@ class HeroSMS(ChannelBase):
                 data = json.loads(text)
             except json.JSONDecodeError:
                 return None
-            if 'activationId' in data and 'phoneNumber' in data:
+            has_activation = 'activationId' in data or 'activation_id' in data or 'id' in data
+            has_phone = 'phoneNumber' in data or 'phone' in data or 'number' in data
+            if has_activation and has_phone:
                 return data
         return None
 
@@ -92,11 +94,26 @@ class HeroSMS(ChannelBase):
         text = self._req(params)
         data = self._parse_json_number(text)
         if data:
-            phone = str(data['phoneNumber'])
-            activation_id = str(data['activationId'])
+            phone = str(data.get('phoneNumber') or data.get('phone') or data.get('number'))
+            activation_id = str(data.get('activationId') or data.get('activation_id') or data.get('id'))
             self._phone_activation_map[phone] = activation_id
             self.circuit.record(True)
             return {'code': 0, 'phone': phone, 'activation_id': activation_id}
+
+        min_price = self._minimum_allowed_price(text)
+        current_max = float(params.get('maxPrice') or 0)
+        if min_price and current_max and min_price > current_max:
+            retry_params = dict(params)
+            retry_params['maxPrice'] = min_price
+            retry_text = self._req(retry_params)
+            retry_data = self._parse_json_number(retry_text)
+            if retry_data:
+                phone = str(retry_data.get('phoneNumber') or retry_data.get('phone') or retry_data.get('number'))
+                activation_id = str(retry_data.get('activationId') or retry_data.get('activation_id') or retry_data.get('id'))
+                self._phone_activation_map[phone] = activation_id
+                self.circuit.record(True)
+                return {'code': 0, 'phone': phone, 'activation_id': activation_id}
+            text = retry_text
 
         if text.startswith('ACCESS_NUMBER:'):
             parts = text.split(':')
@@ -109,6 +126,22 @@ class HeroSMS(ChannelBase):
 
         self.circuit.record(False)
         return {'code': -1, 'msg': self._translate_error(text)}
+
+    def _minimum_allowed_price(self, text: str) -> float | None:
+        if not text.startswith('{'):
+            return None
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+        title = str(data.get('title') or data.get('error') or '').upper()
+        if title != 'WRONG_MAX_PRICE':
+            return None
+        info = data.get('info') if isinstance(data.get('info'), dict) else {}
+        try:
+            return float(info.get('min') or info.get('minimum') or 0)
+        except (TypeError, ValueError):
+            return None
 
     def get_message(self, project_sid, phone, activation_id: str | None = None) -> dict:
         aid = activation_id or self._phone_activation_map.get(phone, '')
@@ -165,6 +198,27 @@ class HeroSMS(ChannelBase):
         return 0.0
 
     def _translate_error(self, text: str) -> str:
+        if text.startswith('{'):
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                data = {}
+            title = str(data.get('title') or data.get('error') or '').upper()
+            if title == 'WRONG_MAX_PRICE':
+                info = data.get('info') if isinstance(data.get('info'), dict) else {}
+                min_price = info.get('min') or info.get('minimum')
+                if min_price:
+                    return f'上游最高价设置过低，当前至少需要 ${min_price}'
+                return '上游最高价设置过低，请提高项目的上游最高价'
+            if title == 'EARLY_CANCEL_DENIED':
+                info = data.get('info') if isinstance(data.get('info'), dict) else {}
+                min_time = info.get('minActivationTime') or info.get('min_activation_time')
+                if min_time:
+                    return f'上游要求取号后至少等待 {min_time} 秒才能释放号码'
+                return '上游暂时不允许立即释放号码，请稍后再试'
+            details = data.get('details') or data.get('message')
+            if details:
+                return f'HeroSMS 返回错误: {details}'
         error_map = {
             'NO_BALANCE': '上游余额不足',
             'NO_NUMBERS': '暂无可用号码',
