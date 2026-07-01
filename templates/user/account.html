@@ -4,13 +4,17 @@
 {% block content %}
 <div class="page-header">
     <h2>账户信息</h2>
-    <p>查看账户详情、登录状态和邀请返利</p>
+    <p>查看账户详情、登录状态、VIP 身份和邀请返利</p>
+</div>
+<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:700;background:{{ '#dbeafe' if is_vip else '#f1f5f9' }};color:{{ '#1d4ed8' if is_vip else '#64748b' }}">{{ 'VIP用户' if is_vip else '普通用户' }}</span>
 </div>
 <div style="display:flex;flex-wrap:wrap;gap:20px">
     <div style="flex:1;min-width:300px;background:#fff;border-radius:12px;padding:28px 24px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
         <h3 style="font-size:1rem;font-weight:600;color:#0f172a;margin:0 0 20px">基本信息</h3>
         <div class="info-row"><span class="label">余额</span><span class="val">¥<strong id="accBalance">{{ balance|default(0) }}</strong></span></div>
         <div class="info-row"><span class="label">已绑定邮箱</span><span class="val" id="accEmail">{{ email or '未绑定' }}</span></div>
+        <div class="info-row"><span class="label">用户身份</span><span class="val" style="color:{{ '#1d4ed8' if is_vip else '#64748b' }};font-weight:700">{{ 'VIP用户' if is_vip else '普通用户' }}</span></div>
         <div class="info-row"><span class="label">登录密码</span><span class="val" style="color:{{ '#059669' if has_password else '#dc2626' }}">{{ '已设置' if has_password else '未设置' }}</span></div>
         <div class="info-row"><span class="label">推荐人</span><span class="val">{{ referred_by or '无' }}</span></div>
         <div class="info-row"><span class="label">返利状态</span>

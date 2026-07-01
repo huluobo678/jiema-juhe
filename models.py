@@ -14,11 +14,11 @@ def _migrate_upgrade(conn):
     except Exception:
         pass
     try:
-        conn.execute("ALTER TABLE channels ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
+        conn.execute("ALTER TABLE channels ADD COLUMN vip_markup_percent REAL DEFAULT 0")
     except Exception:
         pass
     try:
-        conn.execute("ALTER TABLE channels ADD COLUMN vip_only INTEGER DEFAULT 0")
+        conn.execute("ALTER TABLE channels ADD COLUMN concurrent_limit INTEGER DEFAULT 5")
     except Exception:
         pass
     try:
@@ -55,6 +55,10 @@ def _migrate_upgrade(conn):
         pass
     try:
         conn.execute("ALTER TABLE projects ADD COLUMN base_price REAL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE projects ADD COLUMN vip_price REAL DEFAULT 0")
     except Exception:
         pass
     try:
@@ -101,12 +105,21 @@ def _migrate_upgrade(conn):
     ''')
     conn.commit()
 
-def calculate_final_price(project_price, project_base_price, channel_markup, price_type='auto'):
-    """计算最终售价。fixed 使用项目固定价；auto 使用上游成本加渠道加价。"""
-    if price_type == 'fixed' and project_price and float(project_price) > 0:
-        return float(project_price)
+def calculate_final_price(project_price, project_base_price, channel_markup, price_type='auto', is_vip=False, vip_price=0, vip_markup_percent=None):
+    """计算最终售价。固定价按用户身份取项目价；自动价按用户身份取渠道加价。"""
+    project_price = float(project_price or 0)
+    vip_price = float(vip_price or 0)
+    if price_type == 'fixed':
+        if is_vip and vip_price > 0:
+            return vip_price
+        if project_price > 0:
+            return project_price
+
     base = float(project_base_price or 1.0)
-    return round(base * (1 + float(channel_markup or 0) / 100), 2)
+    markup = float(channel_markup or 0)
+    if is_vip and vip_markup_percent is not None:
+        markup = float(vip_markup_percent or 0)
+    return round(base * (1 + markup / 100), 2)
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -127,8 +140,8 @@ def init_db():
             token TEXT,                          -- 缓存的token
             enabled INTEGER DEFAULT 1,
             markup_percent REAL DEFAULT 0,       -- 加价百分比
+            vip_markup_percent REAL DEFAULT 0,   -- VIP加价百分比
             concurrent_limit INTEGER DEFAULT 5, -- 并发上限
-            vip_only INTEGER DEFAULT 0,          -- VIP专用通道
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 
@@ -143,6 +156,7 @@ def init_db():
             upstream_price_limit_usd REAL DEFAULT 0, -- 最高上游价格（HeroSMS 使用，美元）
             base_price REAL DEFAULT 0,            -- 上游成本/自动加价基准
             base_price_type TEXT DEFAULT 'auto',  -- auto 自动加价 / fixed 固定售价
+            vip_price REAL DEFAULT 0,             -- VIP固定售价
             category TEXT DEFAULT '',             -- 前台分类
             icon TEXT DEFAULT '',                 -- 前台图标
             color TEXT DEFAULT '#f1f5f9',         -- 前台颜色

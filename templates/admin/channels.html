@@ -11,7 +11,7 @@
 {% endblock %}
 {% block content %}
 <h3>渠道管理</h3>
-<p style="color:var(--text-muted);margin-bottom:16px">管理接码渠道、API 登录信息、加价和 VIP 专用通道</p>
+<p style="color:var(--text-muted);margin-bottom:16px">管理接码渠道、API 登录信息、普通加价和 VIP 加价</p>
 
 <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn-modern btn-primary-modern" onclick="showAdd()">+ 添加渠道</button>
@@ -27,8 +27,8 @@
         <th style="background:#1e293b;color:white;padding:10px 14px">API 地址</th>
         <th style="background:#1e293b;color:white;padding:10px 14px">上游余额</th>
         <th style="background:#1e293b;color:white;padding:10px 14px">并发</th>
-        <th style="background:#1e293b;color:white;padding:10px 14px">加价%</th>
-        <th style="background:#1e293b;color:white;padding:10px 14px">VIP</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">普通加价%</th>
+        <th style="background:#1e293b;color:white;padding:10px 14px">VIP加价%</th>
         <th style="background:#1e293b;color:white;padding:10px 14px">状态</th>
         <th style="background:#1e293b;color:white;padding:10px 14px">操作</th>
     </tr></thead>
@@ -42,7 +42,7 @@
         <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;font-weight:700" class="balance-cell" data-id="{{ ch.id }}" data-name="{{ ch.name }}">加载中...</td>
         <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.concurrent_limit or 5 }}</td>
         <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.markup_percent or 0 }}%</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{% if ch.vip_only %}<span class="tag tag-blue">VIP专用</span>{% else %}<span style="color:#94a3b8">普通</span>{% endif %}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">{{ ch.vip_markup_percent or ch.markup_percent or 0 }}%</td>
         <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0">
             {% if ch.enabled %}<span class="tag tag-green">启用</span>{% else %}<span class="tag tag-red">禁用</span>{% endif %}
         </td>
@@ -85,9 +85,9 @@
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API 用户名</label><input name="api_user" id="chUser" class="input-modern"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">API 密码</label><input name="api_pass" id="chPass" type="password" class="input-modern"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">Token <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">测试登录后可自动获取</span></label><input name="token" id="chToken" class="input-modern"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">加价百分比</label><input name="markup_percent" id="chMarkup" type="number" step="0.1" value="0" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">普通加价百分比</label><input name="markup_percent" id="chMarkup" type="number" step="0.1" value="0" class="input-modern"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">VIP加价百分比</label><input name="vip_markup_percent" id="chVipMarkup" type="number" step="0.1" value="0" class="input-modern"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">并发上限 <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">同时取号人数</span></label><input name="concurrent_limit" id="chConcur" type="number" min="1" value="5" class="input-modern"></div>
-                <label class="mb-3" style="display:flex;align-items:center;gap:8px;font-weight:600;color:#0f172a"><input type="checkbox" name="vip_only" id="chVipOnly" value="1"> VIP专用通道</label>
             </form>
         </div>
         <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
@@ -108,8 +108,8 @@ function showAdd() {
     document.getElementById('chPass').value = '';
     document.getElementById('chToken').value = '';
     document.getElementById('chMarkup').value = '0';
+    document.getElementById('chVipMarkup').value = '0';
     document.getElementById('chConcur').value = '5';
-    document.getElementById('chVipOnly').checked = false;
     document.getElementById('addModal').style.display = 'flex';
 }
 
@@ -142,8 +142,8 @@ async function showEdit(id) {
     document.getElementById('chPass').value = '';
     document.getElementById('chToken').value = ch.token || '';
     document.getElementById('chMarkup').value = ch.markup_percent || 0;
+    document.getElementById('chVipMarkup').value = ch.vip_markup_percent || ch.markup_percent || 0;
     document.getElementById('chConcur').value = ch.concurrent_limit || 5;
-    document.getElementById('chVipOnly').checked = !!Number(ch.vip_only || 0);
     document.getElementById('addModal').style.display = 'flex';
 }
 

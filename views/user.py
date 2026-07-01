@@ -25,6 +25,12 @@ def row_value(row, key, default=''):
         return row[key]
     return default
 
+def current_account(db):
+    token = request.cookies.get('account_token')
+    if not token:
+        return None
+    return db.execute("SELECT * FROM accounts WHERE token=?", (token,)).fetchone()
+
 def session_channel_meta(db, session_row):
     channel = db.execute("SELECT name, channel_type FROM channels WHERE id=?", (session_row['channel_id'],)).fetchone()
     channel_name = row_value(channel, 'name')
@@ -55,17 +61,20 @@ def index():
         return resp
     
     db = get_db()
+    acc = current_account(db)
+    is_vip = bool(row_value(acc, 'is_vip', 0))
     projects = db.execute("""
-        SELECT p.id, p.name, p.price, p.base_price, p.base_price_type, c.markup_percent, c.name as channel_name
+        SELECT p.id, p.name, p.price, p.vip_price, p.base_price, p.base_price_type, c.markup_percent, c.vip_markup_percent, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
     projects_clean = []
     for p in projects:
-        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
-        projects_clean.append({'id': p['id'], 'name': p['name'], 'price': final_price})
+        normal_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'], is_vip=is_vip, vip_price=row_value(p, 'vip_price', 0), vip_markup_percent=row_value(p, 'vip_markup_percent', p['markup_percent']))
+        projects_clean.append({'id': p['id'], 'name': p['name'], 'price': final_price, 'normal_price': normal_price, 'is_vip_price': is_vip and final_price < normal_price})
     db.close()
-    return render_template('user/index.html', projects=projects_clean)
+    return render_template('user/index.html', projects=projects_clean, is_vip=is_vip)
 
 @user_bp.route('/redeem', methods=['POST'])
 def redeem():
@@ -126,10 +135,10 @@ def balance():
     if not account_token:
         return jsonify({'ok': False, 'balance': 0})
     db = get_db()
-    acc = db.execute("SELECT balance FROM accounts WHERE token=?", (account_token,)).fetchone()
+    acc = db.execute("SELECT balance, is_vip FROM accounts WHERE token=?", (account_token,)).fetchone()
     db.close()
     balance_value = float(acc['balance'] if acc else 0)
-    return jsonify({'ok': True, 'balance': balance_value, 'balance_text': f'{balance_value:.2f}'})
+    return jsonify({'ok': True, 'balance': balance_value, 'balance_text': f'{balance_value:.2f}', 'is_vip': bool(row_value(acc, 'is_vip', 0))})
 
 @user_bp.route('/announcements')
 @user_bp.route('/user/announcements')
@@ -144,17 +153,20 @@ def announcements():
 @user_bp.route('/projects')
 def project_list():
     db = get_db()
+    acc = current_account(db)
+    is_vip = bool(row_value(acc, 'is_vip', 0))
     rows = db.execute("""
-        SELECT p.id, p.name, p.price, p.base_price, p.base_price_type, p.category, p.country, p.location, c.markup_percent, c.name as channel_name
+        SELECT p.id, p.name, p.price, p.vip_price, p.base_price, p.base_price_type, p.category, p.country, p.location, p.icon, p.color, c.markup_percent, c.vip_markup_percent, c.name as channel_name
         FROM projects p JOIN channels c ON p.channel_id=c.id
         WHERE c.enabled=1
     """).fetchall()
     projects = []
     for p in rows:
-        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
-        projects.append({'id': p['id'], 'name': p['name'], 'price': final_price, 'category': p['category'], 'country': p['country'], 'location': p['location'], 'channel_name': p['channel_name'], 'base_price_type': p['base_price_type']})
+        normal_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'])
+        final_price = calculate_final_price(p['price'], p['base_price'], p['markup_percent'], p['base_price_type'], is_vip=is_vip, vip_price=row_value(p, 'vip_price', 0), vip_markup_percent=row_value(p, 'vip_markup_percent', p['markup_percent']))
+        projects.append({'id': p['id'], 'name': p['name'], 'price': final_price, 'normal_price': normal_price, 'is_vip_price': is_vip and final_price < normal_price, 'category': p['category'], 'country': p['country'], 'location': p['location'], 'channel_name': p['channel_name'], 'base_price_type': p['base_price_type'], 'icon': p['icon'], 'color': p['color']})
     db.close()
-    return render_template('user/projects.html', projects=projects)
+    return render_template('user/projects.html', projects=projects, is_vip=is_vip)
 
 @user_bp.route('/sms/<view_token>')
 def sms_view(view_token):
@@ -244,16 +256,14 @@ def start_order():
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
     markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
+    vip_markup = row_value(ch_row, 'vip_markup_percent', markup)
     price_type = project['base_price_type'] if 'base_price_type' in project.keys() else 'auto'
-    total_price = calculate_final_price(project['price'], base_price, markup, price_type)
+    is_vip = bool(row_value(acc, 'is_vip', 0))
+    total_price = calculate_final_price(project['price'], base_price, markup, price_type, is_vip=is_vip, vip_price=row_value(project, 'vip_price', 0), vip_markup_percent=vip_markup)
 
     if float(acc['balance']) < total_price:
         db.close()
         return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
-    is_vip = bool(row_value(acc, 'is_vip', 0))
-    if ch_row and row_value(ch_row, 'vip_only', 0) and not is_vip:
-        db.close()
-        return jsonify({'ok': False, 'msg': '该项目当前走 VIP 专用通道，请联系管理员开通 VIP'})
 
     # ====== 智能调度器选渠道 ======
     ch = smart_scheduler.pick_channel(project, is_vip=is_vip)
@@ -327,13 +337,14 @@ def start_order_by_number():
     base_price = project['base_price'] if 'base_price' in project.keys() else 0
     ch_row = db.execute("SELECT * FROM channels WHERE id=?", (project['channel_id'],)).fetchone()
     markup = ch_row['markup_percent'] if ch_row and 'markup_percent' in ch_row.keys() else 0
+    vip_markup = row_value(ch_row, 'vip_markup_percent', markup)
     price_type = project['base_price_type'] if 'base_price_type' in project.keys() else 'auto'
-    total_price = calculate_final_price(project['price'], base_price, markup, price_type)
+    is_vip = bool(row_value(acc, 'is_vip', 0))
+    total_price = calculate_final_price(project['price'], base_price, markup, price_type, is_vip=is_vip, vip_price=row_value(project, 'vip_price', 0), vip_markup_percent=vip_markup)
 
     if float(acc['balance']) < total_price:
         db.close()
         return jsonify({'ok': False, 'msg': f'余额不足，需要{total_price}元，当前{acc["balance"]}元'})
-    is_vip = bool(row_value(acc, 'is_vip', 0))
 
     # ====== 锁定到项目绑定的渠道 ======
     ch = get_channel_registry().get(project['channel_id'])
@@ -346,9 +357,6 @@ def start_order_by_number():
     if ch is None:
         db.close()
         return jsonify({'ok': False, 'msg': '渠道不可用'})
-    if getattr(ch, 'vip_only', False) and not is_vip:
-        db.close()
-        return jsonify({'ok': False, 'msg': '该项目当前走 VIP 专用通道，请联系管理员开通 VIP'})
 
     if not ch.acquire():
         db.close()
@@ -655,17 +663,19 @@ def user_account():
     referred_by = None
     invite_link = None
     has_password = False
+    is_vip = False
     if account_token:
         db = get_db()
-        acc = db.execute("SELECT email, referred_by, password_hash FROM accounts WHERE token=?", (account_token,)).fetchone()
+        acc = db.execute("SELECT email, referred_by, password_hash, is_vip FROM accounts WHERE token=?", (account_token,)).fetchone()
         if acc:
             email = acc['email']
             referred_by = acc['referred_by']
             has_password = bool(row_value(acc, 'password_hash'))
+            is_vip = bool(row_value(acc, 'is_vip', 0))
             if email:
                 invite_link = SITE_URL.rstrip('/') + '/?ref=' + account_token
         db.close()
-    return render_template('user/account.html', email=email, referred_by=referred_by, invite_link=invite_link, has_password=has_password)
+    return render_template('user/account.html', email=email, referred_by=referred_by, invite_link=invite_link, has_password=has_password, is_vip=is_vip)
 
 @user_bp.route('/logout')
 def logout():

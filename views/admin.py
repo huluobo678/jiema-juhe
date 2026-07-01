@@ -140,9 +140,9 @@ def add_channel():
     api_pass = request.form.get('api_pass', '')
 
     markup_percent = float(request.form.get('markup_percent', 0))
+    vip_markup_percent = float(request.form.get('vip_markup_percent', markup_percent) or 0)
 
     channel_type = request.form.get('channel_type', 'haozhuma')
-    vip_only = 1 if request.form.get('vip_only') == '1' else 0
 
     db = get_db()
 
@@ -150,8 +150,8 @@ def add_channel():
 
         cl = int(request.form.get('concurrent_limit', 5))
 
-        cur = db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, concurrent_limit, channel_type, vip_only) VALUES (?,?,?,?,?,?,?,?)",
-        (name, api_url, api_user, api_pass, markup_percent, cl, channel_type, vip_only))
+        cur = db.execute("INSERT INTO channels (name, api_url, api_user, api_pass, markup_percent, vip_markup_percent, concurrent_limit, channel_type) VALUES (?,?,?,?,?,?,?,?)",
+        (name, api_url, api_user, api_pass, markup_percent, vip_markup_percent, cl, channel_type))
         db.commit()
         channel_id = cur.lastrowid
 
@@ -259,19 +259,19 @@ def edit_channel(id):
     token = request.form.get('token', '')
 
     channel_type = request.form.get('channel_type', 'haozhuma')
-    vip_only = 1 if request.form.get('vip_only') == '1' else 0
 
     markup_percent = float(request.form.get('markup_percent', 0))
+    vip_markup_percent = float(request.form.get('vip_markup_percent', markup_percent) or 0)
 
     db = get_db()
 
     cl = int(request.form.get('concurrent_limit', 5))
 
-    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, channel_type=?, concurrent_limit=?, vip_only=?
+    db.execute("""UPDATE channels SET name=?, api_url=?, api_user=?, api_pass=?, token=?, markup_percent=?, vip_markup_percent=?, channel_type=?, concurrent_limit=?
 
                    WHERE id=?""",
 
-               (name, api_url, api_user, api_pass, token, markup_percent, channel_type, cl, vip_only, id))
+               (name, api_url, api_user, api_pass, token, markup_percent, vip_markup_percent, channel_type, cl, id))
 
     db.commit()
 
@@ -428,7 +428,6 @@ def channels_status():
         'concurrent': c.concurrency,
 
         'concurrent_limit': c.max_concurrency,
-        'vip_only': getattr(c, 'vip_only', False),
 
         'last_ping': '-',
 
@@ -476,12 +475,12 @@ def add_project():
 
     try:
 
-        db.execute("""INSERT INTO projects (name, channel_id, sid, country, location, upstream_price_limit_usd, base_price, base_price_type, price, description, category, icon, color)
-                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        db.execute("""INSERT INTO projects (name, channel_id, sid, country, location, upstream_price_limit_usd, base_price, base_price_type, price, vip_price, description, category, icon, color)
+                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                    (request.form['name'], request.form['channel_id'], request.form.get('sid', '').strip(),
                     request.form.get('country', '').strip(), request.form.get('location', '').strip(),
                     float(request.form.get('upstream_price_limit_usd') or 0), float(request.form.get('base_price') or 0),
-                    request.form.get('base_price_type', 'auto'), float(request.form['price']),
+                    request.form.get('base_price_type', 'auto'), float(request.form['price']), float(request.form.get('vip_price') or 0),
                     request.form.get('description', ''), request.form.get('category', ''),
                     request.form.get('icon', ''), request.form.get('color', '#f1f5f9')))
 
@@ -510,12 +509,12 @@ def edit_project(id):
     try:
 
         db.execute("""UPDATE projects SET name=?, channel_id=?, sid=?, country=?, location=?, upstream_price_limit_usd=?,
-                      base_price=?, base_price_type=?, price=?, description=?, category=?, icon=?, color=?
+                      base_price=?, base_price_type=?, price=?, vip_price=?, description=?, category=?, icon=?, color=?
                       WHERE id=?""",
                    (request.form['name'], request.form['channel_id'], request.form.get('sid', '').strip(),
                     request.form.get('country', '').strip(), request.form.get('location', '').strip(),
                     float(request.form.get('upstream_price_limit_usd') or 0), float(request.form.get('base_price') or 0),
-                    request.form.get('base_price_type', 'auto'), float(request.form['price']),
+                    request.form.get('base_price_type', 'auto'), float(request.form['price']), float(request.form.get('vip_price') or 0),
                     request.form.get('description', ''), request.form.get('category', ''),
                     request.form.get('icon', ''), request.form.get('color', '#f1f5f9'), id))
 

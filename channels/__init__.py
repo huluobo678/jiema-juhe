@@ -30,7 +30,7 @@ def init_channels(db):
 
 def auto_register_channel(db_row, adapter_class):
     """Manually register one channel adapter."""
-    config = {k: db_row[k] for k in ('api_url', 'api_user', 'api_pass', 'token', 'concurrent_limit', 'vip_only') if k in db_row.keys()}
+    config = {k: db_row[k] for k in ('api_url', 'api_user', 'api_pass', 'token', 'concurrent_limit') if k in db_row.keys()}
     config['channel_id'] = db_row['id']
     adapter = adapter_class(db_row['id'], db_row['name'], config)
     if hasattr(adapter, 'login'):

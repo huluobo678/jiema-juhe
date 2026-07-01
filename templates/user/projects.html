@@ -151,6 +151,9 @@
     <h2>📋 项目管理</h2>
     <p>选择项目 → 获取验证码</p>
 </div>
+<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:700;background:{{ '#dbeafe' if is_vip else '#f1f5f9' }};color:{{ '#1d4ed8' if is_vip else '#64748b' }}">{{ 'VIP用户' if is_vip else '普通用户' }}</span>
+</div>
 
 <!-- ===== 指定号码取号 ===== -->
 <div class="s2-card" id="manualPhoneCard">
@@ -159,7 +162,7 @@
         <select id="manualProjectSelect" style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.9rem;min-width:180px">
             <option value="">选择项目...</option>
             {% for p in projects %}
-            <option value="{{ p.id }}">{{ p.name }} ({{ p.price }}元)</option>
+            <option value="{{ p.id }}">{{ p.name }} ({{ '%.2f'|format(p.price) }}元)</option>
             {% endfor %}
         </select>
         <input id="manualPhoneInput" type="tel" placeholder="输入号码..." 
@@ -229,7 +232,9 @@
               <div class="pj-meta">{{ p.category if p.category else '通用' }}{% if p.country %} · {{ p.country }}{% endif %}{% if p.location %} · {{ p.location }}{% endif %}</div>
             </div>
             <div class="pj-bottom">
-              <span class="s2-price-pill">{{ p.price }} 元</span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+                {% if is_vip and p.is_vip_price %}<span class="s2-price-pill" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa)">{{ '%.2f'|format(p.price) }} 元</span><span style="font-size:0.72rem;color:#94a3b8;text-decoration:line-through">{{ '%.2f'|format(p.normal_price) }} 元</span>{% else %}<span class="s2-price-pill">{{ '%.2f'|format(p.price) }} 元</span>{% endif %}
+              </div>
             </div>
         </div>
         {% endfor %}

@@ -19,8 +19,6 @@ class SmartScheduler:
             return False
         if channel.channel_id in exclude_ids:
             return False
-        if getattr(channel, 'vip_only', False) and not is_vip:
-            return False
         if channel.is_dead():
             return False
         return circuit_registry.get(f'channel:{channel.name}').allow_request()
@@ -72,7 +70,6 @@ class SmartScheduler:
                 'alive': channel.alive,
                 'concurrency': channel.concurrency,
                 'max_concurrency': channel.max_concurrency,
-                'vip_only': getattr(channel, 'vip_only', False),
                 'circuit_state': circuit['state'],
                 'fail_rate': round(circuit['fail_rate'] * 100, 1),
             })

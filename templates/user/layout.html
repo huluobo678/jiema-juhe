@@ -114,6 +114,7 @@
             <div class="top-balance">
                 余额 <strong id="topBalance">¥{{ balance|default('0.00') }}</strong>
             </div>
+            <div style="margin-left:10px;padding:4px 10px;border-radius:999px;font-size:0.75rem;font-weight:700;background:{{ '#dbeafe' if is_vip else '#f1f5f9' }};color:{{ '#1d4ed8' if is_vip else '#64748b' }}">{{ 'VIP用户' if is_vip else '普通用户' }}</div>
         </div>
     </div>
 

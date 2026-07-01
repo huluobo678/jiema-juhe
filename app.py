@@ -94,13 +94,15 @@ def inject_globals():
     ctx = {
         'session_username': flask_session.get('admin_username', ''),
         'balance': 0,
+        'is_vip': False,
     }
     token = request.cookies.get('account_token')
     if token:
         db = get_db()
-        acc = db.execute('SELECT balance FROM accounts WHERE token=?', (token,)).fetchone()
+        acc = db.execute('SELECT balance, is_vip FROM accounts WHERE token=?', (token,)).fetchone()
         if acc:
             ctx['balance'] = acc['balance']
+            ctx['is_vip'] = bool(acc['is_vip'] if 'is_vip' in acc.keys() else 0)
         db.close()
     return ctx
 

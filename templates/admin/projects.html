@@ -1,11 +1,13 @@
 {% extends "admin/layout.html" %}
 {% block title %}项目管理{% endblock %}
 {% block head %}
-<style>.mb-3{margin-bottom:16px}.hint{font-size:.8rem;color:#94a3b8;font-weight:400}.tool-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}</style>
+<style>
+.mb-3{margin-bottom:16px}.hint{font-size:.8rem;color:#94a3b8;font-weight:400}.tool-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+</style>
 {% endblock %}
 {% block content %}
 <h3>项目管理</h3>
-<p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道。豪猪填写项目 ID；HeroSMS 填服务代码和国家代码。</p>
+<p style="color:var(--text-muted);margin-bottom:16px">每个项目绑定一个渠道。固定价和自动加价都支持普通价与 VIP 价。</p>
 
 <div class="tool-row">
     <button class="btn-modern btn-primary-modern" onclick="showAdd()">+ 添加项目</button>
@@ -13,7 +15,7 @@
 </div>
 
 <table class="table-modern">
-    <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>服务代码</th><th>国家</th><th>归属地</th><th>定价</th><th>最高上游价</th><th>上游成本</th><th>售价</th><th>描述</th><th>操作</th></tr></thead>
+    <thead><tr><th>ID</th><th>名称</th><th>分类</th><th>渠道</th><th>服务代码</th><th>国家</th><th>归属地</th><th>定价</th><th>普通价</th><th>VIP价</th><th>上游成本</th><th>上游限价</th><th>描述</th><th>操作</th></tr></thead>
     <tbody>
     {% for p in projects %}
     <tr>
@@ -25,9 +27,10 @@
         <td>{{ p.country or '-' }}</td>
         <td>{{ p.location or '-' }}</td>
         <td>{{ '固定价' if p.base_price_type == 'fixed' else '加价' }}</td>
+        <td>{{ '%.2f'|format(p.price or 0) }} 元</td>
+        <td>{{ '%.2f'|format(p.vip_price or 0) }} 元</td>
+        <td>{{ '%.2f'|format(p.base_price or 0) }} 元</td>
         <td>${{ p.upstream_price_limit_usd or 0 }}</td>
-        <td>{{ p.base_price or 0 }} 元</td>
-        <td>{{ p.price }} 元</td>
         <td>{{ p.description or '-' }}</td>
         <td>
             <button class="btn-modern" style="padding:4px 12px;font-size:0.85rem;background:var(--warning);color:white;border:none;border-radius:6px;cursor:pointer" onclick="editProject({{ p.id }})">编辑</button>
@@ -50,17 +53,18 @@
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">选择渠道</label>
                     <select name="channel_id" id="p_channel_id" class="input-modern" required>
                         {% for c in channels %}
-                        <option value="{{ c.id }}" data-name="{{ c.name }}">{{ c.name }}</option>
+                        <option value="{{ c.id }}">{{ c.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游服务代码 / 项目 ID <span class="hint">HeroSMS 如 tg/go，豪猪如 88920</span></label><input name="sid" id="p_sid" class="input-modern" required></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">国家代码 <span class="hint">HeroSMS 必填，例如 16；豪猪可留空</span></label><input name="country" id="p_country" class="input-modern" placeholder="16"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">归属地 <span class="hint">豪猪可填省/市/地区；HeroSMS 可留空</span></label><input name="location" id="p_location" class="input-modern" placeholder="北京 / 上海 / 广东"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">最高上游价格(USD) <span class="hint">HeroSMS 可填，取号时只接受不超过该价格的号码；填 0 表示不限制</span></label><input name="upstream_price_limit_usd" id="p_upstream_price_limit_usd" type="number" step="0.0001" class="input-modern" value="0"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游成本(元) <span class="hint">从 HeroSMS 查询结果带入，用于参考或自动定价</span></label><input name="base_price" id="p_base_price" type="number" step="0.01" class="input-modern" value="0"></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">定价方式 <span class="hint">固定价不加价；自动加价按上游成本 + 渠道加价%</span></label><select name="base_price_type" id="p_base_price_type" class="input-modern"><option value="auto">自动加价</option><option value="fixed">固定价格</option></select></div>
-                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">前台售价(元/次) <span class="hint">填 0 时按上游成本 + 渠道加价%</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">国家代码 <span class="hint">HeroSMS 必填，豪猪可留空</span></label><input name="country" id="p_country" class="input-modern" placeholder="16"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">归属地 <span class="hint">豪猪可填省/市，HeroSMS 可留空</span></label><input name="location" id="p_location" class="input-modern" placeholder="北京 / 上海 / 广东"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游最高价 (USD) <span class="hint">HeroSMS 可填，取号时只接收不超过该价格的号码；0 表示不限制</span></label><input name="upstream_price_limit_usd" id="p_upstream_price_limit_usd" type="number" step="0.0001" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">上游成本 (元) <span class="hint">用于自动加价项目</span></label><input name="base_price" id="p_base_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">定价方式 <span class="hint">固定价直接卖；自动加价按上游成本 + 渠道加价%</span></label><select name="base_price_type" id="p_base_price_type" class="input-modern"><option value="auto">自动加价</option><option value="fixed">固定价格</option></select></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">普通售价 (元) <span class="hint">固定价项目使用，自动加价项目可留作展示</span></label><input name="price" id="p_price" type="number" step="0.01" class="input-modern" value="0"></div>
+                <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">VIP售价 (元) <span class="hint">VIP 用户看到并下单的价格；不填则默认普通价</span></label><input name="vip_price" id="p_vip_price" type="number" step="0.01" class="input-modern" value="0"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">分类</label><input name="category" id="p_category" class="input-modern" placeholder="如：AI、社交、金融"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">图标</label><input name="icon" id="p_icon" class="input-modern" placeholder="📱 或 SVG 代码"></div>
                 <div class="mb-3"><label style="font-weight:600;margin-bottom:4px;display:block">颜色</label><input name="color" id="p_color" class="input-modern" placeholder="#f1f5f9" value="#f1f5f9"></div>
@@ -87,6 +91,7 @@ function fillProject(data) {
     document.getElementById('p_base_price').value = data.base_price || '0';
     document.getElementById('p_base_price_type').value = data.base_price_type || 'auto';
     document.getElementById('p_price').value = data.price || '0';
+    document.getElementById('p_vip_price').value = data.vip_price || '0';
     document.getElementById('p_category').value = data.category || '';
     document.getElementById('p_icon').value = data.icon || '';
     document.getElementById('p_color').value = data.color || '#f1f5f9';
@@ -102,8 +107,7 @@ async function submitProject() {
     const editId = document.getElementById('editId').value;
     const form = document.getElementById('projectForm');
     const data = new FormData(form);
-    let url = '/admin/projects/add';
-    if (editId) url = '/admin/projects/' + editId + '/edit';
+    const url = editId ? '/admin/projects/' + editId + '/edit' : '/admin/projects/add';
     const r = await fetch(url, {method:'POST', body:data});
     const d = await r.json();
     if (d.ok) location.reload();
@@ -137,6 +141,7 @@ async function deleteProject(id) {
         base_price: params.get('base_price') || '0',
         base_price_type: params.get('base_price_type') || 'auto',
         price: params.get('price') || '0',
+        vip_price: params.get('vip_price') || '0',
         name: params.get('name') || '',
         category: '海外'
     });

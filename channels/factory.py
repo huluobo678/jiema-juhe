@@ -1,10 +1,10 @@
-"""渠道工厂 - 根据 channel_type 创建对应适配器实例"""
+"""娓犻亾宸ュ巶 - 鏍规嵁 channel_type 鍒涘缓瀵瑰簲閫傞厤鍣ㄥ疄渚?"""
 from channels.base import ChannelBase
 
 def create_channel_adapter(db_row) -> ChannelBase | None:
     """
-    根据数据库行记录创建对应类型的渠道适配器实例。
-    不注册到注册中心，仅用于一次性操作（测试登录、余额查询等）。
+    鏍规嵁鏁版嵁搴撹璁板綍鍒涘缓瀵瑰簲绫诲瀷鐨勬笭閬撻€傞厤鍣ㄥ疄渚嬨€?
+    涓嶆敞鍐屽埌娉ㄥ唽涓績锛屼粎鐢ㄤ簬涓€娆℃€ф搷浣滐紙娴嬭瘯鐧诲綍銆佷綑棰濇煡璇㈢瓑锛夈€?
     """
     def _g(row, key, default=''):
         try:
@@ -23,7 +23,6 @@ def create_channel_adapter(db_row) -> ChannelBase | None:
         'api_pass': _g(db_row, 'api_pass', ''),
         'token': _g(db_row, 'token', ''),
         'concurrent_limit': _g(db_row, 'concurrent_limit', 5),
-        'vip_only': _g(db_row, 'vip_only', 0),
         'channel_id': cid,
     }
 
@@ -31,16 +30,15 @@ def create_channel_adapter(db_row) -> ChannelBase | None:
         from .herosms import HeroSMS
         return HeroSMS(cid, cname, config)
 
-    if channel_type == 'haozhuma' or 'haozhuma' in name or 'hz' in name or '豪猪' in name:
+    if channel_type == 'haozhuma' or 'haozhuma' in name or 'hz' in name or '璞尓' in name:
         from .haozhuma import HaoZhuMa
         return HaoZhuMa(cid, cname, config)
 
-    # 默认按名称匹配
     if 'herosms' in name:
         from .herosms import HeroSMS
         return HeroSMS(cid, cname, config)
 
-    if 'haozhuma' in name or 'hz' in name or '豪猪' in name:
+    if 'haozhuma' in name or 'hz' in name or '璞尓' in name:
         from .haozhuma import HaoZhuMa
         return HaoZhuMa(cid, cname, config)
 
